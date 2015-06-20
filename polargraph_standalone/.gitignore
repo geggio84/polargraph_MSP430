@@ -1,0 +1,10 @@
+.launches
+.settings
+Release
+Debug
+.ccsproject
+.cdtbuild
+.cdtproject
+.project
+lnk_msp430g2553.cmd
+MSP430G2553.ccxml
