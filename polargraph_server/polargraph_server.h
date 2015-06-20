@@ -1,0 +1,2746 @@
+///////////////////////////////////////////////////////////////////////
+// Header file for polargraph controller
+///////////////////////////////////////////////////////////////////////
+#ifndef POLARGRAPH_SERVER_H_
+#define POLARGRAPH_SERVER_H_
+
+#define MCLK_FREQUENCY      16000000
+#define WDT_DIVIDER			8192
+
+#define WDT_FREQUENCY		(MCLK_FREQUENCY / WDT_DIVIDER) / 1000
+volatile unsigned long wdtCounter = 0;
+
+// PINS defines
+//inizializzo le porte
+// PIN Stepper Left
+#define   sx_stepper_port_dir P2DIR 
+#define   sx_stepper_port_out P2OUT  			
+#define   sx_stepper_dir   BIT1
+#define   sx_stepper_step  BIT2
+#define	  sx_stepper_enable BIT0
+// PIN Stepper Right
+#define   dx_stepper_port_dir P2DIR
+#define   dx_stepper_port_out P2OUT	
+#define   dx_stepper_dir   BIT4
+#define   dx_stepper_step  BIT3
+#define	  dx_stepper_enable BIT5
+// UART pins
+#define   RX		   BIT1
+#define	  TX		   BIT2
+// Servo motor
+#define	servo_pin		BIT0
+// BUTTON
+#define   button	   BIT3
+// home switches	
+#define S1_PIN          BIT4
+#define S2_PIN          BIT5
+// PIN per debug
+#define   Debug1       BIT5
+#define		LED1		BIT0
+
+// general defines
+#define true 1
+#define false 0
+
+// define directions
+#define FORWARD  0
+#define BACKWARD 1
+
+// define sides
+#define SX		0
+#define DX		1
+
+//  EEPROM addresses
+#define EEPROM_MACHINE_WIDTH 			0
+#define EEPROM_MACHINE_HEIGHT 			2
+#define EEPROM_MACHINE_NAME 			4
+#define EEPROM_MACHINE_MM_PER_REV 		14
+#define EEPROM_MACHINE_STEPS_PER_REV 	16
+#define EEPROM_LENGHT					20
+
+
+// switch state
+static char switch1;
+static char switch2;
+//#define sensorGap = 47 //gap between sensor activation points
+long lengthHome;
+long lengthHomeSteps;
+long leftStepsRetract;
+long machineWd;
+#define yHome 120 //distance in mm from motor to home location
+#define gondolaOffset 75 //distance from centre point of gondola to switching edge in mm
+int const rightExtend = 750;//1500; //number of steps to extend right motor during home routine to prevent missed steps during left home sequence
+// motor position
+long laststep1, laststep2, stepsNeeded;
+
+// print define
+unsigned char polargraph_standalone = 1;
+#define PRINT(text,lf) if(!polargraph_standalone) Serial_print(text , lf);
+
+// Pen raising servo
+//Servo penHeight;
+unsigned char const UP_POSITION = 40;
+unsigned char const DOWN_POSITION = 0;
+unsigned char const PEN_HEIGHT_SERVO_PIN = 10;
+unsigned char isPenUp = true;
+
+
+// Stepper caracteristics
+int motorStepsPerRev = 768; //1536;//
+float mmPerRev = 71;
+float mmPerStep;
+float stepsPerMM;
+// type of stepper movements
+//#define	INTERLEAVE		1
+//const int stepType = INTERLEAVE;
+
+long current_pos[2] = {0 , 0};
+long target_pos[2] = {0 , 0};
+float speed[2] = {0 , 0};
+float maxSpeed[2] = {1 , 1};
+float acceleration[2] = {1 , 1};
+unsigned long stepInterval[2] = {0 , 0};
+unsigned long lastStepTime[2] = {0 , 0};
+//long distanceToGo[2] = {0 , 0};
+
+// Machine dimensions 
+int machineWidth = 722;//570;//650;
+int machineHeight = 1000;//900;//800;
+int pageWidth;
+int pageHeight;
+int maxLength = 0;
+#define DEFAULT_MACHINE_WIDTH 		722//570//650
+#define DEFAULT_MACHINE_HEIGHT		1000//900//800
+#define DEFAULT_MM_PER_REV			71//95
+#define DEFAULT_STEPS_PER_REV		768//1536//
+
+// Machine Name
+#define machine_name_lenght 5
+const char DEFAULT_MACHINE_NAME[machine_name_lenght] =	"PG01";
+char machineName[machine_name_lenght] = {0,0,0,0,0};
+
+// Speed and Acceleration
+float currentMaxSpeed = 500.0;
+float currentAcceleration = 200.0;
+#define SUPERFAST_ACCELERATION 6000
+// Start lenght
+#define startLengthMM				800
+
+//static unsigned char rowAxis[] = "A";
+#define INLENGTH 		50
+const char INTERMINATOR = 10;
+
+#define DIRECTION_STRING_LTR	"LTR"
+#define SRAM_SIZE 				512 //2048
+#define FREE_MEMORY_STRING		"MEMORY,"
+int availMem = 0;
+
+// line width in mm
+static float penWidth = 0.8; 
+
+// FLAGS
+unsigned char reportingPosition = true;
+//unsigned char acceleration_flag = true;
+//unsigned char currentlyRunning = false;
+
+// Command and parameters of the actual command
+#define param_lenght 6
+#define cmd_lenght 4
+static char inCmd[cmd_lenght];
+static char inParam1[param_lenght];
+static char inParam2[param_lenght];
+static char inParam3[param_lenght];
+static char inParam4[param_lenght];
+// number of parameters of the actual command
+int inNoOfParams;
+
+static unsigned char lastWaveWasTop = true;
+static unsigned char lastMotorBiasWasA = true;
+//static boolean drawingLeftToRight = true;
+
+// RX BUFFER
+#define rx_buffer_lenght 40
+unsigned char rx_index = 0;
+unsigned char rx_pointer = 0;
+unsigned char rx_lenght = 0;
+char rx_buffer[rx_buffer_lenght];
+
+//  Drawing direction
+#define DIR_NE 	1
+#define DIR_SE 	2
+#define DIR_SW 	3
+#define DIR_NW 	4
+#define DIR_N 	5
+#define DIR_E 	6
+#define DIR_S 	7
+#define DIR_W 	8
+static unsigned char globalDrawDirection = 4; //DIR_NW;
+
+#define DIR_MODE_AUTO 		1
+#define DIR_MODE_PRESET 	2
+#define DIR_MODE_RANDOM 	3
+static unsigned char globalDrawDirectionMode = 1; //DIR_MODE_AUTO;
+
+
+//static int currentRow = 0;
+
+#define READY					"READY"
+#define RESEND					"RESEND"
+#define DRAWING					"DRAWING"
+#define OUT_CMD_CARTESIAN		"CARTESIAN,"
+#define OUT_CMD_SYNC			"SYNC,"
+
+//static unsigned char readyString[] = "READY"; //READY;
+
+#define max_command_lenght 40
+static char lastCommand[max_command_lenght] = "";
+unsigned char lastCommandConfirmed = false;
+
+//int roveMaxA = 0;
+//int roveMinA = 0;
+//int roveMaxB = 0;
+//int roveMinB = 0;
+//unsigned char roving = false;
+
+#define COMMA			","
+#define CMD_EXEC		"EXEC"
+#define CMD_ACK			"ACK,"
+
+// Define COMMANDS
+#define CMD_CHANGELENGTH				"C01"
+#define CMD_CHANGEPENWIDTH				"C02"
+#define CMD_CHANGEMOTORSPEED			"C03"
+#define CMD_CHANGEMOTORACCEL			"C04"
+#define CMD_DRAWPIXEL					"C05"
+#define CMD_DRAWSCRIBBLEPIXEL			"C06"
+#define CMD_DRAWRECT					"C07"
+#define CMD_CHANGEDRAWINGDIRECTION		"C08"
+#define CMD_SETPOSITION					"C09"
+#define CMD_AUTOSETPOSITION				"C99"
+#define CMD_TESTPATTERN					"C10"
+#define CMD_TESTPENWIDTHSQUARE			"C11"
+#define CMD_TESTPENWIDTHSCRIBBLE		"C12"
+#define CMD_PENDOWN						"C13"
+#define CMD_PENUP						"C14"
+#define CMD_CHANGELENGTHDIRECT			"C17"
+#define CMD_SETMACHINESIZE				"C24"
+#define CMD_SETMACHINENAME				"C25"
+#define CMD_GETMACHINEDETAILS			"C26"
+#define CMD_RESETEEPROM					"C27"
+#define CMD_DRAWDIRECTIONTEST			"C28"
+#define CMD_SETMACHINEMMPERREV			"C29"
+#define CMD_SETMACHINESTEPSPERREV		"C30"
+#define CMD_SETMOTORSPEED				"C31"
+#define CMD_SETMOTORACCEL				"C32"
+#define CMD_END							",END"
+
+///////////////////////////////////////////////////////////////////////
+//  Function prototypes
+///////////////////////////////////////////////////////////////////////
+// Command Functions
+	void changeLength();					// C01
+	void changePenWidth();					// C02
+	void changeMotorSpeed();				// C03
+	void changeMotorAcceleration();			// C04
+	void drawSquarePixel_command();			// C05
+	void drawScribblePixel_from_command();	// C06
+	void drawRectangle();					// C07
+	void changeDrawingDirection();			// C08
+	void setPosition();						// C09
+	void testPattern();						// C10
+	void testPenWidth();					// C11
+	void testPenWidthScribble();			// C12
+	void penDown();							// C13
+	void penUp();							// C14
+	void changeLengthDirect();				// C17
+	void setMachineSizeFromCommand();		// C24
+	void setMachineNameFromCommand();		// C25
+	void reportMachineSpec();				// C26
+	void resetEeprom();						// C27
+	void drawTestDirectionSquare();			// C28
+	void setMachineMmPerRevFromCommand();	// C29
+	void setMachineStepsPerRevFromCommand();// C30
+	void setMotorSpeed_from_parameter();	// C31
+	void setMotorAcceleration_from_parameter();// C32	
+
+void homeRoutine();
+void readSwitches();
+
+// 
+void delay_us(unsigned int us);
+void ConfigWDT(void);
+void FaultRoutine(void);
+void ConfigClocks(void);
+void ConfigPorts(void);
+void Config_UART();
+void strreverse(char* begin, char* end);
+void itoa(int value, char* str, int base);
+void loadMachineSpecFromEeprom();
+
+// EEPROM Functions
+	void EEPROMWriteInt(int p_address, int p_value);
+	unsigned int EEPROMReadInt(int p_address);
+	void EEPROM_write(int p_address, unsigned char lowByte);
+	unsigned char EEPROM_read(int p_address);
+	void dumpEeprom();
+	
+// Serial TX-RX
+	char Serial_read();
+	unsigned char Serial_available();
+	void Serial_print(char string[], unsigned char line_feed);
+// Servo Motor Functions
+	void movePenUp();
+	void movePenDown();
+	void testPenHeight();
+	//void testServoRange();
+
+int strncmp(const char *s1, const char *s2, size_t n);
+
+void establishContact();
+void ready();
+void drawing();
+void acknowledge(char command[]);
+void setMaxSpeed(float MaxSpeed , unsigned char side);
+void setAcceleration(float Acceleration , unsigned char side);
+void setCurrentPosition(long Position , unsigned char side);
+void delay(unsigned int ms);
+char* readCommand(char* inString);
+unsigned long millis();
+void delayMillis(unsigned long milliseconds);
+unsigned char parseCommand(char* inS);
+void extractParams(char* inS);
+void executeCommand(char inS[]);
+long asLong(char* inParam);
+int asInt(char* inParam);
+char asByte(char* inParam);
+float asFloat(char* inParam);
+int availableMemory();
+void outputAvailableMemory();
+void changeLength_float(float tA, float tB);
+void changeLength_long(long tA, long tB);
+void reportPosition();
+long currentPosition(unsigned char side);
+long getMaxLength();
+float getMachineA(float cX, float cY);
+float getMachineB(float cX, float cY);
+void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmentLength);
+float getCartesianXFP(float aPos, float bPos);
+float getCartesianYFP(float cX, float aPos);
+void useAcceleration(unsigned char use);
+void setMotorSpeed(float speed);
+void setMotorAcceleration(float accel);
+void drawSquarePixel(int length, int width, int density, unsigned char drawDirection);
+void drawScribblePixel(long originA, long originB, int size, int density);
+unsigned char getAutoDrawDirection(long targetA, long targetB, long sourceA, long sourceB);
+unsigned char getRandomDrawDirection();
+int scaleDensity(int inDens, int inMax, int outMax);
+int maxDensity(float penSize, int rowSize);
+void drawSquareWaveAlongA(int waveAmplitude, int waveLength, int totalWaves, int waveNo);
+void drawSquareWaveAlongB(int waveAmplitude, int waveLength, int totalWaves, int waveNo);
+void flipWaveDirection();
+void moveA(long dist);
+void moveB(long dist);
+void moveTo(long destination , unsigned char side);
+void move(long relative , unsigned char side);
+unsigned char run(unsigned char side);
+unsigned char runSpeed(unsigned char side);
+void step(unsigned int step, unsigned char side);
+void computeNewSpeed(unsigned char side);
+float desiredSpeed(unsigned char side);
+void setSpeed(float speed_target , unsigned char side);
+long distanceToGo_function(unsigned char side);
+int random(int min, int max);
+void runToPosition(unsigned char side);
+void engageMotors();
+void runToNewPosition(long position , unsigned char side);
+void releaseMotors();
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//  FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////////////////
+/*float sqrt(float m)
+{
+	int j;	
+   float i=0;
+   float x1,x2;
+   while( (i*i) <= m )
+          i+=0.1;
+   x1=i;
+   for(j=0;j<10;j++)
+   {
+        x2=m;
+      x2/=x1;
+      x2+=x1;
+      x2/=2;
+      x1=x2;
+   }
+   return x2;
+}*/
+
+int strncmp(const char *s1, const char *s2, size_t n)
+ {
+     unsigned char uc1, uc2;
+     /* Nothing to compare?  Return zero.  */
+     if (n == 0)
+         return 0;
+     /* Loop, comparing bytes.  */
+     while (n-- > 0 && *s1 == *s2) {
+         /* If we've run out of bytes or hit a null, return zero
+            since we already know *s1 == *s2.  */
+         if (n == 0 || *s1 == '\0')
+             return 0;
+         s1++;
+         s2++;
+     }
+     uc1 = (*(unsigned char *) s1);
+     uc2 = (*(unsigned char *) s2);
+     return ((uc1 < uc2) ? -1 : (uc1 > uc2));
+ }
+/************************************************************************
+ *
+ *	Find the length of a string - does not check if we fall off
+ *	the end of the text buffer. oops.
+ *
+ ************************************************************************/
+
+int strlen(const char *text)
+{
+  int  count=-1;				/* Character counter	*/
+
+  while(text[++count] != '\0') ;		/* Serach for a null	*/
+
+  return(count);				/* Return the position 
+						 * of the NULL-1	*/
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Return milliseconds from power-up or reset
+//////////////////////////////////////////////////////////////////////////
+unsigned long millis(){
+  return wdtCounter / ((unsigned long)WDT_FREQUENCY);
+}
+//////////////////////////////////////////////////////////////////////////
+// Pause for milliseconds
+//////////////////////////////////////////////////////////////////////////
+void delayMillis(unsigned long milliseconds){
+  unsigned long wakeTime = wdtCounter + (milliseconds * WDT_FREQUENCY);
+  while(wdtCounter < wakeTime);
+}
+//////////////////////////////////////////////////////////////////////////
+// reverse string
+//////////////////////////////////////////////////////////////////////////
+char temp_char[10];
+void strreverse(char* begin, char* end) {
+
+	char aux;
+	
+	while(end>begin)
+		aux=*end, *end--=*begin, *begin++=aux;	
+}
+//////////////////////////////////////////////////////////////////////////
+// Integer to string
+//////////////////////////////////////////////////////////////////////////	
+void itoa(int value, char* str, int base) {
+	
+	static char num[] = "0123456789abcdefghijklmnopqrstuvwxyz";	
+	char* wstr=str;	
+	int sign;
+	
+	// Validate base	
+	if (base<2 || base>35){ *wstr='\0'; return; }
+	
+	// Take care of sign
+	if ((sign=value) < 0) value = -value;
+	
+	// Conversion. Number is reversed.
+	do *wstr++ = num[value%base]; while(value/=base);
+	if(sign<0) *wstr++='-';
+	*wstr='\0';
+	// Reverse string
+	strreverse(str,wstr-1);	
+}
+//////////////////////////////////////////////////////////////////////////
+// ConfigWDT
+//////////////////////////////////////////////////////////////////////////
+void ConfigWDT(void)
+ {
+ //WDTCTL = WDTPW + WDTHOLD;                 // Stop watchdog timer
+ WDTCTL = WDTPW + WDTTMSEL + WDTIS0;         // Watchdog timer = SMCLK / 8192
+ IE1 |= WDTIE;
+ }
+//////////////////////////////////////////////////////////////////////////
+// FaultRoutine
+////////////////////////////////////////////////////////////////////////// 
+void FaultRoutine(void)
+ {
+   //P1OUT = BIT0;                  // P1.0 on (red LED)
+   while(1); 			          // TRAP
+ }
+//////////////////////////////////////////////////////////////////////////
+// ConfigClocks
+//////////////////////////////////////////////////////////////////////////
+void ConfigClocks(void)
+ {
+ if (CALBC1_1MHZ ==0xFF || CALDCO_1MHZ == 0xFF)                                       
+   FaultRoutine();		                    // If calibration data is erased
+ 				                            // run FaultRoutine()
+  BCSCTL1 = CALBC1_16MHZ; 					// Set range
+  DCOCTL = CALDCO_16MHZ;  					// Set DCO step + modulation 
+  BCSCTL3 |= LFXT1S_2;                      // LFXT1 = VLO
+  IFG1 &= ~OFIFG;                           // Clear OSCFault flag
+  BCSCTL2 |= SELM_0 + DIVM_0 + DIVS_0;      // MCLK = DCO/1, SMCLK = DCO/1	
+ }
+//////////////////////////////////////////////////////////////////////////
+// ConfigPorts
+////////////////////////////////////////////////////////////////////////// 
+void ConfigPorts(void)
+ {
+  sx_stepper_port_dir = sx_stepper_dir + sx_stepper_step + sx_stepper_enable;
+  P1DIR = servo_pin;
+  P1REN = S1_PIN + S2_PIN;
+  P1OUT = S1_PIN + S2_PIN;   
+  dx_stepper_port_dir |= dx_stepper_dir + dx_stepper_step + dx_stepper_enable;
+  sx_stepper_port_out = sx_stepper_enable;
+  dx_stepper_port_out |= dx_stepper_enable;	
+ }
+//////////////////////////////////////////////////////////////////////////
+// ConfigUART
+//////////////////////////////////////////////////////////////////////////
+void Config_UART()
+{
+	UCA0CTL1 = UCSWRST; // UCSI software reset (OFF STATE)
+    UCA0CTL0 = 0; 
+    UCA0CTL1 |= UCSSEL_3;   // SMCLK is clock for UCSI
+    // 9600 @ 16MHz
+    //UCA0BR0 = 130;	// 1666
+    //UCA0BR1	= 6;
+    //UCA0MCTL = UCBRS1+UCBRS2;  // UCOS16=0; UCBRS=6; UCBRF=0;
+    // 115200 @ 16MHz
+    //UCA0BR0 = 138;	// 138
+    //UCA0BR1	= 0;
+    //UCA0MCTL = UCBRS0+UCBRS1+UCBRS2;  // UCOS16=0; UCBRS=7; UCBRF=0;
+    // 57600 @ 16MHz
+    UCA0BR0 = 17;	// 17
+    UCA0BR1	= 0;
+    UCA0MCTL = UCBRF2 + UCBRF1 + UCOS16;  // UCOS16=1; UCBRS=0; UCBRF=6;
+    
+	P1SEL = TX + RX;    // config pins
+	P1SEL2 = TX + RX;
+  	P1DIR |= TX;          // 
+    UCA0CTL1 &= ~UCSWRST; // UCSI software reset (ON STATE)
+//5. Enable interrupts (optional) via UCAxRXIE and/or UCAxTXIE
+	IE2 |= UCA0RXIE; // abilito irq in rx
+}
+//////////////////////////////////////////////////////////////////////////
+// Resume Machine Specifications from EEPROM
+//////////////////////////////////////////////////////////////////////////
+void loadMachineSpecFromEeprom()
+{
+	unsigned char i;
+	char name[4];
+	
+	machineWidth = EEPROMReadInt(EEPROM_MACHINE_WIDTH);
+	if (machineWidth < 1)
+	{
+		machineWidth = DEFAULT_MACHINE_WIDTH;
+	}
+	Serial_print("Loaded machine width:" , 0);
+	itoa(machineWidth,temp_char,10);
+	Serial_print(temp_char , 1);
+  
+	machineHeight = EEPROMReadInt(EEPROM_MACHINE_HEIGHT);
+	if (machineHeight < 1)
+	{
+		machineHeight = DEFAULT_MACHINE_HEIGHT;
+	}
+	Serial_print("Loaded machine height:" , 0);
+	itoa(machineHeight,temp_char,10);
+	Serial_print(temp_char , 1);
+
+	mmPerRev = EEPROMReadInt(EEPROM_MACHINE_MM_PER_REV);
+  	if ((mmPerRev < 1)|(mmPerRev > 100))
+  	{
+    	mmPerRev = DEFAULT_MM_PER_REV;
+  	}
+  	Serial_print("Loaded mm per rev:" , 0);
+  	itoa(mmPerRev,temp_char,10);
+  	Serial_print(temp_char , 1);
+
+  	motorStepsPerRev = EEPROMReadInt(EEPROM_MACHINE_STEPS_PER_REV);
+  	if (motorStepsPerRev < 1)
+  	{
+    	motorStepsPerRev = DEFAULT_STEPS_PER_REV;
+  	}
+  	Serial_print("Loaded motor steps per rev:" , 0);
+  	itoa(motorStepsPerRev,temp_char,10);
+  	Serial_print(temp_char , 1);
+
+  	mmPerStep = mmPerRev / motorStepsPerRev;
+  	stepsPerMM = motorStepsPerRev / mmPerRev;
+  
+  	Serial_print("Recalculated mmPerStep (" , 0);
+  	ltoa(mmPerStep,temp_char);
+  	Serial_print(temp_char , 0);
+  	Serial_print(") and stepsPerMM (" , 0);
+  	ltoa(stepsPerMM,temp_char);
+  	Serial_print(temp_char , 0);
+  	Serial_print(")" , 1);
+  
+  	pageWidth = machineWidth * stepsPerMM;
+  	Serial_print("Recalculated pageWidth in steps (" , 0);
+  	itoa(pageWidth,temp_char,10);
+  	Serial_print(temp_char , 0);
+  	Serial_print(")" , 1);
+  	pageHeight = machineHeight * stepsPerMM;
+  	Serial_print("Recalculated pageHeight in steps (" , 0);
+  	itoa(pageHeight,temp_char,10);
+  	Serial_print(temp_char , 0);
+  	Serial_print(")" , 1);
+  	
+  	for (i = 0; i < 4; i++)
+  	{
+    	char b = EEPROM_read(EEPROM_MACHINE_NAME+i);
+    	name[i] = b;
+  	}
+  	if (name[0] == 0)
+  	for (i = 0; i < 4; i++)
+  	{
+    	name[i] = DEFAULT_MACHINE_NAME[i];
+  	}
+  	maxLength = 0;
+  	for (i = 0; i < 4; i++)
+  	{
+    	machineName[i] = name[i];
+  	}
+  	Serial_print("Loaded machine name:" , 0);
+  	Serial_print(machineName , 1);
+}
+//////////////////////////////////////////////////////////////////////////
+//This function will write a 2 byte integer to the eeprom at the specified address and address + 1
+//////////////////////////////////////////////////////////////////////////
+void EEPROMWriteInt(int p_address, int p_value)
+{
+  Serial_print("Writing Int " , 0);
+  itoa(p_value,temp_char,10);
+  Serial_print(temp_char , 0);
+  Serial_print(" to address " , 0);
+  itoa(p_address,temp_char,10);
+  Serial_print(temp_char , 1);
+
+  unsigned char lowByte = ((p_value >> 0) & 0xFF);
+  unsigned char highByte = ((p_value >> 8) & 0xFF);
+  EEPROM_write(p_address, lowByte);
+  EEPROM_write(p_address + 1, highByte);
+}
+//////////////////////////////////////////////////////////////////////////
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+//////////////////////////////////////////////////////////////////////////
+unsigned int EEPROMReadInt(int p_address)
+{
+  unsigned char lowByte = EEPROM_read(p_address);
+  unsigned char highByte = EEPROM_read(p_address + 1);
+  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+}
+//////////////////////////////////////////////////////////////////////////
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+//////////////////////////////////////////////////////////////////////////
+unsigned char EEPROM_read(int p_address)
+{	
+	unsigned char *Flash_ptr;                           // Segment D pointer
+	char data;
+	int addr = 0x1000 + p_address;
+	Flash_ptr = (unsigned char *)addr;              // Point to beginning of seg D
+	data = *Flash_ptr;
+	return data;
+	//return 0;
+}
+//////////////////////////////////////////////////////////////////////////
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+//////////////////////////////////////////////////////////////////////////
+void EEPROM_write(int p_address, unsigned char lowByte)
+{
+	int j;
+	unsigned char *Flash_ptr;                           // Segment D pointer
+	char data[EEPROM_LENGHT];
+	
+	for (j = 0; j < EEPROM_LENGHT; j++)
+	{
+		data[j] = EEPROM_read(j);
+	}
+	
+	Flash_ptr = (unsigned char *)0x1000;              // Point to beginning of seg D
+	FCTL2 = FWKEY + FSSEL0 + FN5 + FN3 + FN2 + FN1 + FN0; // MCLK = 16M  /48 = 333kHz for Flash Timing Generator
+	FCTL1 = FWKEY + ERASE;                    // Set Erase bit
+	FCTL3 = FWKEY; //+ LOCKA;                    // Clear LOCK & LOCKA bits
+	*Flash_ptr = 0x00;                       // Dummy write to erase Flash seg D
+	FCTL1 = FWKEY + WRT;                      // Set WRT bit for write operation
+	for (j = 0; j < EEPROM_LENGHT; j++)
+	{
+		if(j == p_address)
+			*Flash_ptr++ = lowByte;	          // flash write
+		else
+			*Flash_ptr++ = data[j];	          // flash write
+	}
+	FCTL1 = FWKEY;                            // Clear WRT bit
+	FCTL3 = FWKEY + LOCKA + LOCK;             // Set LOCK & LOCKA bit
+}
+
+//void motora_onestep(unsigned char direction, int stepType){}
+//void motorb_onestep(unsigned char direction, int stepType){}  
+//void forwarda() {  
+//  motora_onestep(FORWARD, stepType);
+//}
+//void backwarda() {  
+//  motora_onestep(BACKWARD, stepType);
+//}
+//
+//void forwardb() {  
+//  motorb_onestep(FORWARD, stepType);
+//}
+//void backwardb() {  
+//  motorb_onestep(BACKWARD, stepType);
+//}
+
+//////////////////////////////////////////////////////////////////
+// Delay ms milliseconds										//
+//////////////////////////////////////////////////////////////////
+void delay(unsigned int ms)
+{
+	unsigned int count = ms;
+while (count != 0)
+{
+__delay_cycles(16000); // set for 16Mhz change it to 1000 for 1 Mhz
+count--;
+}
+}
+//////////////////////////////////////////////////////////////////
+// Delay us microseconds										//
+//////////////////////////////////////////////////////////////////
+void delay_us(unsigned int us)
+{
+	unsigned int count = us;
+while (count != 0)
+{
+__delay_cycles(16); // set for 16Mhz change it to 1000 for 1 Mhz
+count--;
+}
+}
+//////////////////////////////////////////////////////////////////
+// Move pen Up													//
+//////////////////////////////////////////////////////////////////
+void movePenUp()
+{
+	int i;
+  //penHeight.attach(PEN_HEIGHT_SERVO_PIN);
+  for (i=DOWN_POSITION; i<UP_POSITION; i++) {
+//    Serial.println(i);
+    //penHeight.write(i);
+    P1OUT |= servo_pin;
+    delay_us(925);			// 
+    P1OUT &= ~servo_pin;
+    delayMillis(17);
+  }
+  //penHeight.detach();
+  isPenUp = true;
+}  
+//////////////////////////////////////////////////////////////////
+// If Down move Up												//
+//////////////////////////////////////////////////////////////////
+void penUp()
+{
+  if (isPenUp == false)
+  {
+    movePenUp();
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Move Pen down												//
+//////////////////////////////////////////////////////////////////
+void movePenDown()
+{
+	int i;
+  //penHeight.attach(PEN_HEIGHT_SERVO_PIN);
+  for (i=UP_POSITION; i>DOWN_POSITION; i--) {
+//    Serial.println(i);
+    //penHeight.write(i);
+    P1OUT |= servo_pin;
+    delay_us(1700);			// 
+    P1OUT &= ~servo_pin;
+    delayMillis(15);
+  }
+  //penHeight.detach();
+  isPenUp = false;
+}
+//////////////////////////////////////////////////////////////////
+// If Up move down												//
+//////////////////////////////////////////////////////////////////
+void penDown()
+{
+  if (isPenUp == true)
+  {
+    movePenDown();
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Test Pen Height												//
+//////////////////////////////////////////////////////////////////
+void testPenHeight()
+{
+  delayMillis(3000);
+  penUp();
+  delayMillis(3000);
+  penDown();
+  delayMillis(3000);
+}
+//////////////////////////////////////////////////////////////////
+// Test Servo Range												//
+//////////////////////////////////////////////////////////////////
+/*void testServoRange()
+{
+	int i;
+  //penHeight.attach(PEN_HEIGHT_SERVO_PIN);
+  for (i=0; i<200; i++) {
+    //Serial_println(i);
+    //penHeight.write(i);
+    delayMillis(15);
+  }
+  //penHeight.detach();
+}*/
+
+void readSwitches() {
+  // get the current switch state
+  switch1= P1IN & S1_PIN;
+  switch2= P1IN & S2_PIN;
+}
+
+void homeRoutine(){
+	int i;
+	penDown();
+	// find the current robot position and 
+	// reel in the left motor until contact is made.
+	//let out gondola to avoid being at home position
+
+	//at this point gondola is away from both home location
+	//note holding current draw ~600mA
+
+	sx_stepper_port_out &= ~sx_stepper_enable;
+	dx_stepper_port_out &= ~dx_stepper_enable;
+
+	//setCurrentPosition(0 , SX);
+	//setCurrentPosition(0 , DX);
+
+	setSpeed(-500,SX);
+	setSpeed(500,DX);
+	dx_stepper_port_out |= dx_stepper_enable;
+
+	do {
+		//move left motor back and right motor forward to find left hime location
+		while(runSpeed(SX)==false);
+		step(1,SX);  //DOUBLE= twice the torque
+		//step(1,DX);
+		//release(DX);  //try this to avoid cord becoming tangled on spool, stepper does not have enough torque, use DOUBLE
+		//to overcome friction and missing steps
+
+		readSwitches();
+	} while (switch1 != 0);
+
+	setSpeed(500,SX);
+	setSpeed(-500,DX); 
+	dx_stepper_port_out &= ~dx_stepper_enable; 
+	sx_stepper_port_out |= sx_stepper_enable;
+	//now we know that left motor is at home location
+	//count # steps for right home
+	//  laststep1=0;  //set step counter to zero
+    do {
+      //move right  motor back and left motor released to find right home location
+	  while(runSpeed(DX)==false);
+      //step(1,SX);//release(SX);
+      step(1,DX);
+
+      readSwitches();
+  	} while (switch2 != 0);
+
+	sx_stepper_port_out &= ~sx_stepper_enable;     
+    //We have now homed left and right, but # steps to home right contains steps to pull in slack in cord
+    //So, know we now we have no slack, do home routine again to find true # steps R->L
+    //due to small spools size and build up of cord, there are slightly different take up/let down rates for each spool
+    //that can cause missed steps, to remove this right mor will release slightly and steps will be accounted for in calc (rightExtend)
+	setSpeed(-500,SX);  //
+	setSpeed(500,DX);
+	//laststep1=0;  //set step counter to zero
+	for(i=0; i<rightExtend; i++){
+		while(runSpeed(DX)==false);
+	}
+    //step(rightExtend,DX);
+
+	setSpeed(500,DX);
+    laststep1=0;  //set step counter to zero
+	do {
+		//move left motor back and right motor forward to find left hime location
+		while(runSpeed(SX)==false);
+		//step(1,DX);
+		while(runSpeed(DX)==false);
+		//step(1,SX);
+
+		laststep1++;
+		readSwitches();
+	} while (switch1 != 0);
+
+	//at this point right motor at home and we know how many steps from L->R
+	//using pythagoras, machineWidth/2 contains home x location
+	//set number of steps needed to get to home location
+	//method using pythagorus calculate # of steps needed from home position from left and right
+	//laststep1 contains #of steps traveresed by left so move left back to get to above
+	//forward right motor by calc # of steps to get to home
+	//laststep2 = (laststep1-(stepsPerMM/sensorGap))/2;
+	machineWd=machineWidth/2;  //convert to long, scale for half way
+
+	//lengthHome= sqrt((machineWd*machineWd)-((yHome-gondolaOffset)*(yHome-gondolaOffset))); //in mm and allow for gondola offset
+	lengthHome = (sqrt((machineWd*machineWd)-(yHome*yHome))) - gondolaOffset; //in mm and allow for gondola offset 
+
+	//convert to steps
+	lengthHomeSteps=lengthHome*stepsPerMM*2;//not sure why but need to correct steps/mm by factor of 2
+	//calc # of steps for left motor to retract
+	leftStepsRetract = laststep1 - lengthHomeSteps + rightExtend;
+	//   leftStepsRetract = lengthHomeSteps;
+
+	// stepsNeeded = sqrt (laststep2*laststep2+(stepsPerMM*stepsPerMM*14400))/(1/stepsPerMM);
+	setSpeed(500,SX);  //motors can use normal speed
+	setSpeed(-500,DX);
+
+    do {
+    	while(runSpeed(SX)==false);
+    	//while(runSpeed(DX)==false);
+        //step(1,SX);
+        lengthHomeSteps--;
+    } while (lengthHomeSteps > 0);  //allow for extension in above
+
+    do {
+    	while(runSpeed(DX)==false);
+    	//while(runSpeed(DX)==false);
+        //step(1,SX);
+        leftStepsRetract--;
+    } while (leftStepsRetract > 0);  //allow for extension in above    
+
+	setSpeed(500,DX);
+    //Now at home location
+}
+
+
+//////////////////////////////////////////////////////////////////
+// Read incoming command										//
+//////////////////////////////////////////////////////////////////
+char* readCommand(char* inString)
+{
+  // check if data has been sent from the computer:
+  //char inString[INLENGTH+1];
+  int inCount = 0;
+  while (Serial_available() > 0)
+  {
+    char ch = Serial_read();       // get it
+    delayMillis(15);
+    inString[inCount] = ch;
+    if (ch == INTERMINATOR)
+    {
+      //Serial_flush();
+      break;
+    }
+    inCount++;
+  }
+  inString[inCount] = 0;                     // null terminate the string
+  char* inS = inString;
+  return inS;
+}
+//////////////////////////////////////////////////////////////////
+// Tell how many chars in rx buffer								//
+//////////////////////////////////////////////////////////////////
+unsigned char Serial_available(){
+	return rx_lenght;
+}
+//////////////////////////////////////////////////////////////////
+// return first byte received or -1 if no byte in buffer		//
+//////////////////////////////////////////////////////////////////
+char Serial_read(){
+	char byte;
+	
+	if(rx_lenght == 0){
+		return (char)-1;
+	}
+	else{
+		byte = rx_buffer[rx_pointer];
+		rx_buffer[rx_pointer] = 0;
+		rx_pointer++;
+		if (rx_pointer == rx_buffer_lenght) rx_pointer = 0;
+		rx_lenght--;
+		return byte;
+	}
+}
+//////////////////////////////////////////////////////////////////
+// print string to serial tx buffer								//
+//////////////////////////////////////////////////////////////////
+void Serial_print(char string[], unsigned char line_feed){
+	unsigned char i;
+	unsigned char tx_lenght;
+	
+	tx_lenght = strlen(string);
+		
+	for(i=0; i < tx_lenght; i++){
+		UCA0TXBUF = string[i];
+		while(UCA0STAT & UCBUSY){}
+	}
+	if (line_feed) 
+	{
+		UCA0TXBUF = 13;
+		while(UCA0STAT & UCBUSY){}
+		UCA0TXBUF = 10;
+		while(UCA0STAT == UCBUSY){}
+	}	
+}
+//////////////////////////////////////////////////////////////////
+// Send READY string to host									//
+//////////////////////////////////////////////////////////////////
+void ready()
+{
+  Serial_print(READY , 1);
+}
+//////////////////////////////////////////////////////////////////
+// establish connection with host								//
+//////////////////////////////////////////////////////////////////
+void establishContact() 
+{
+  ready();
+}
+//////////////////////////////////////////////////////////////////
+// Send DRAWING string to host									//
+//////////////////////////////////////////////////////////////////
+void drawing()
+{
+  Serial_print(DRAWING , 1);
+}
+//////////////////////////////////////////////////////////////////
+// Send ACK to received command									//
+//////////////////////////////////////////////////////////////////
+void acknowledge(char command[])
+{
+  if(polargraph_standalone) 
+  {
+  	Serial_print(CMD_ACK , 1);
+  }
+  else
+  {
+  	Serial_print(CMD_ACK , 0);
+  	Serial_print(command , 1);
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Extract substring from string from start to end				//
+//////////////////////////////////////////////////////////////////
+void substring(char* string, char* string_out, unsigned char start, unsigned char end){
+	unsigned char i;
+	
+	for(i=0; i<end-start; i++){
+		string_out[i] = string[i+start];
+	}
+}
+//////////////////////////////////////////////////////////////////
+// Parse Command												//
+//////////////////////////////////////////////////////////////////
+unsigned char parseCommand(char* inS)
+{
+	// check if command ends with ",END"
+  	char endChars[4];
+  	char lenght;
+  	unsigned char i;
+  	//substring(inS, endChars, strlen(inS)-4, strlen(inS));
+  	lenght = strlen(inS);
+  	for(i=0; i<4; i++){
+  		endChars[i] = inS[lenght-4+i];
+  	}
+  	if (strncmp(endChars,CMD_END,4)==0)
+  	{
+    	extractParams(inS);
+    	return true;
+  	}
+  	else
+    	return false;
+}
+//void requestResend()
+//{
+//  Serial_print(RESEND , 1);
+//}
+//char* extractCommandFromExecute(char inS[])
+//{
+//  char result[] = inS.substring(8);
+//  return result;
+//}
+//////////////////////////////////////////////////////////////////
+// Execute Command												//
+//////////////////////////////////////////////////////////////////
+void executeCommand(char inS[])
+{
+  //outputAvailableMemory();
+  
+  if (strncmp(inS,CMD_CHANGELENGTH,3)==0)
+  {
+  	//Serial_print("CMD_CHANGELENGTH" , 1);
+    changeLength();
+  }
+  else if (strncmp(inS,CMD_CHANGELENGTHDIRECT,3)==0)
+  {
+    //Serial_print("CMD_CHANGELENGTHDIRECT" , 1);
+    changeLengthDirect();
+  }
+  else if (strncmp(inS,CMD_CHANGEPENWIDTH,3)==0)
+  {
+    //Serial_print("CMD_CHANGEPENWIDTH" , 1);
+    changePenWidth();
+  }
+  else if (strncmp(inS,CMD_CHANGEMOTORSPEED,3)==0)
+  {
+    //Serial_print("CMD_CHANGEMOTORSPEED" , 1);
+    changeMotorSpeed();
+  }
+  else if (strncmp(inS,CMD_CHANGEMOTORACCEL,3)==0)
+  {
+    //Serial_print("CMD_CHANGEMOTORACCEL" , 1);
+    changeMotorAcceleration();
+  }
+  else if (strncmp(inS,CMD_SETMOTORSPEED,3)==0)
+  {
+    //Serial_print("CMD_SETMOTORSPEED" , 1);
+    setMotorSpeed_from_parameter();
+  }
+  else if (strncmp(inS,CMD_SETMOTORACCEL,3)==0)
+  {
+    //Serial_print("CMD_SETMOTORACCEL" , 1);
+    setMotorAcceleration_from_parameter();
+  }
+  else if (strncmp(inS,CMD_DRAWPIXEL,3)==0)
+  {
+    // go to coordinates.
+    //Serial_print("CMD_DRAWPIXEL" , 1);
+    drawSquarePixel_command();
+  }  
+  else if (strncmp(inS,CMD_DRAWSCRIBBLEPIXEL,3)==0)
+  {
+    // go to coordinates.
+    //Serial_print("CMD_DRAWSCRIBBLEPIXEL" , 1);
+    drawScribblePixel_from_command();
+  }  
+  else if (strncmp(inS,CMD_DRAWRECT,3)==0)
+  {
+    // go to coordinates.
+    //Serial_print("CMD_DRAWRECT" , 1);
+    drawRectangle();
+  }
+  else if (strncmp(inS,CMD_CHANGEDRAWINGDIRECTION,3)==0)
+  {
+    //Serial_print("CMD_CHANGEDRAWINGDIRECTION" , 1);
+    changeDrawingDirection();
+  }
+  else if (strncmp(inS,CMD_SETPOSITION,3)==0)
+  {
+    //Serial_print("CMD_SETPOSITION" , 1);
+    setPosition();
+  }
+  else if (strncmp(inS,CMD_AUTOSETPOSITION,3)==0)
+  {
+    //Serial_print("CMD_SETPOSITION" , 1);
+    homeRoutine();
+    setPosition();
+  }
+  else if (strncmp(inS,CMD_TESTPATTERN,3)==0)
+  {
+    //Serial_print("CMD_TESTPATTERN" , 1);
+    testPattern();
+  }
+  else if (strncmp(inS,CMD_TESTPENWIDTHSQUARE,3)==0)
+  {
+    //Serial_print("CMD_TESTPENWIDTHSQUARE" , 1);
+    testPenWidth();
+  }
+  else if (strncmp(inS,CMD_TESTPENWIDTHSCRIBBLE,3)==0)
+  {
+    //Serial_print("CMD_TESTPENWIDTHSCRIBBLE" , 1);
+    testPenWidthScribble();
+  }
+  else if (strncmp(inS,CMD_PENDOWN,3)==0)
+  {
+    //Serial_print("CMD_PENDOWN" , 1);
+    penDown();
+  }
+  else if (strncmp(inS,CMD_PENUP,3)==0)
+  {
+    //Serial_print("CMD_PENUP" , 1);
+    penUp();
+  }
+  else if (strncmp(inS,CMD_SETMACHINESIZE,3)==0)
+  {
+    //Serial_print("CMD_SETMACHINESIZE" , 1);
+    setMachineSizeFromCommand();
+  }
+  else if (strncmp(inS,CMD_SETMACHINENAME,3)==0)
+  {
+    //Serial_print("CMD_SETMACHINENAME" , 1);
+    setMachineNameFromCommand();
+  }
+  else if (strncmp(inS,CMD_SETMACHINEMMPERREV,3)==0)
+  {
+    //Serial_print("CMD_SETMACHINEMMPERREV" , 1);
+    setMachineMmPerRevFromCommand();
+  }
+  else if (strncmp(inS,CMD_SETMACHINESTEPSPERREV,3)==0)
+  {
+    //Serial_print("CMD_SETMACHINESTEPSPERREV" , 1);
+    setMachineStepsPerRevFromCommand();
+  }
+  else if (strncmp(inS,CMD_GETMACHINEDETAILS,3)==0)
+  {
+    //Serial_print("CMD_GETMACHINEDETAILS" , 1);
+    reportMachineSpec();
+  }
+  else if (strncmp(inS,CMD_RESETEEPROM,3)==0)
+  {
+    //Serial_print("CMD_RESETEEPROM" , 1);
+    resetEeprom();
+  }
+  else if (strncmp(inS,CMD_DRAWDIRECTIONTEST,3)==0)
+  {
+    //Serial_print("CMD_DRAWDIRECTIONTEST" , 1);
+    drawTestDirectionSquare();
+  }
+  else
+  {
+    Serial_print("Sorry, " , 0);
+    Serial_print(inS , 0);
+    Serial_print(" isn't a command I recognise." , 1);
+    ready();
+  }
+  PRINT("After execute:" , 1)
+  //outputAvailableMemory();
+}
+//////////////////////////////////////////////////////////////////
+// Convert input parameters										//
+//////////////////////////////////////////////////////////////////
+long asLong(char* inParam)
+{
+  //char paramChar[inParam.length() + 1];
+  //inParam.toCharArray(paramChar, inParam.length() + 1);
+  return atol(inParam);
+}
+int asInt(char* inParam)
+{
+  //char paramChar[inParam.length() + 1];
+  //inParam.toCharArray(paramChar, inParam.length() + 1);
+  return atoi(inParam);
+}
+char asByte(char* inParam)
+{
+  int i = asInt(inParam);
+  return (char) i;
+}
+float asFloat(char* inParam)
+{
+  //char paramChar[inParam.length() + 1];
+  //inParam.toCharArray(paramChar, inParam.length() + 1);
+  return atof(inParam);
+}
+
+///****************************************************************************************************************/
+///****************************************************************************************************************/
+///****************************************************************************************************************/
+///****************************************************************************************************************/
+///****************************            BELOW IS THE CODE THAT DOES THE WORK      ******************************/
+///****************************************************************************************************************/
+///****************************************************************************************************************/
+///****************************************************************************************************************/
+///****************************************************************************************************************/
+
+//////////////////////////////////////////////////////////////////
+// Reset EEPROM													//
+//////////////////////////////////////////////////////////////////
+void resetEeprom()
+{
+	int i;
+  for (i = 0; i <20; i++)
+  {
+    EEPROM_write(i, 0);
+  }
+  loadMachineSpecFromEeprom();
+}
+//////////////////////////////////////////////////////////////////
+// Dump EEPROM													//
+//////////////////////////////////////////////////////////////////
+void dumpEeprom()
+{
+	int i;
+	char k[2] = {0 ,0};
+  for (i = 0; i <20; i++)
+  {
+  	itoa(i,temp_char,10);
+    Serial_print(temp_char , 0);
+    Serial_print(". " , 0);
+    k[0] = EEPROM_read(i);
+    Serial_print(k , 1);
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Print machine Specs											//
+//////////////////////////////////////////////////////////////////
+void reportMachineSpec()
+{
+  dumpEeprom();
+  Serial_print("PGNAME," , 0);
+  Serial_print(machineName , 0);
+  Serial_print(CMD_END , 1);
+  
+  Serial_print("PGSIZE," , 0);
+  itoa(machineWidth, temp_char, 10);
+  Serial_print(temp_char , 0);
+  Serial_print(COMMA , 0);
+  itoa(machineHeight, temp_char, 10);
+  Serial_print(temp_char , 0);
+  Serial_print(CMD_END , 1);
+
+  Serial_print("PGMMPERREV," , 0);
+  //sprintf(temp_char, "%f", mmPerRev);
+  ltoa(mmPerRev, temp_char);
+  Serial_print(temp_char , 0);
+  Serial_print(CMD_END , 1);
+
+  Serial_print("PGSTEPSPERREV," , 0);
+  itoa(motorStepsPerRev, temp_char, 10);
+  Serial_print(temp_char , 0);
+  Serial_print(CMD_END , 1);
+}
+//////////////////////////////////////////////////////////////////
+// Set machine size from command								//
+//////////////////////////////////////////////////////////////////
+void setMachineSizeFromCommand()
+{
+  int width = asInt(inParam1);
+  int height = asInt(inParam2);
+  
+  if (width > 10)
+  {
+    EEPROMWriteInt(EEPROM_MACHINE_WIDTH, width);
+  }
+  if (height > 10)
+  {
+    EEPROMWriteInt(EEPROM_MACHINE_HEIGHT, height);
+  }
+
+  loadMachineSpecFromEeprom();
+}
+//////////////////////////////////////////////////////////////////
+// Set machine name from command								//
+//////////////////////////////////////////////////////////////////
+void setMachineNameFromCommand()
+{
+  char* name = inParam1;
+  int i;
+  if (name != DEFAULT_MACHINE_NAME)
+  {
+    for (i = 0; i < 4; i++)
+    {
+      EEPROM_write(EEPROM_MACHINE_NAME+i, name[i]);
+    }
+  }
+  loadMachineSpecFromEeprom();
+}
+//////////////////////////////////////////////////////////////////
+// Set machine mm per rev from command							//
+//////////////////////////////////////////////////////////////////
+void setMachineMmPerRevFromCommand()
+{
+  float mmPerRev = asFloat(inParam1);
+  EEPROMWriteInt(EEPROM_MACHINE_MM_PER_REV, mmPerRev);
+  loadMachineSpecFromEeprom();
+}
+//////////////////////////////////////////////////////////////////
+// Set steps per rev from command								//
+//////////////////////////////////////////////////////////////////
+void setMachineStepsPerRevFromCommand()
+{
+  int stepsPerRev = asInt(inParam1);
+  EEPROMWriteInt(EEPROM_MACHINE_STEPS_PER_REV, stepsPerRev);
+  loadMachineSpecFromEeprom();
+}
+//////////////////////////////////////////////////////////////////
+// Set max speed from parameters								//
+//////////////////////////////////////////////////////////////////
+void setMotorSpeed_from_parameter()
+{
+  setMotorSpeed(asFloat(inParam1));
+}
+//////////////////////////////////////////////////////////////////
+// Set max speed												//
+//////////////////////////////////////////////////////////////////
+void setMaxSpeed(float MaxSpeed, unsigned char side){
+	maxSpeed[side] = MaxSpeed;
+	computeNewSpeed(side);
+}
+//////////////////////////////////////////////////////////////////
+// Change Stepper motor speed									//
+//////////////////////////////////////////////////////////////////
+void setMotorSpeed(float speed)
+{
+  currentMaxSpeed = speed;
+  setMaxSpeed(currentMaxSpeed , SX);
+  setMaxSpeed(currentMaxSpeed , DX);
+  ltoa(currentMaxSpeed, temp_char);
+  Serial_print("New max speed: " , 0);
+  Serial_print(temp_char , 1);
+}
+//////////////////////////////////////////////////////////////////
+// Change Stepper motor speed									//
+//////////////////////////////////////////////////////////////////
+void changeMotorSpeed()
+{
+  float speedChange = asFloat(inParam1);
+  float newSpeed = currentMaxSpeed + speedChange;
+  setMotorSpeed(newSpeed);
+}
+//////////////////////////////////////////////////////////////////
+// Set Stepper motor acceleration from parameter				//
+//////////////////////////////////////////////////////////////////
+void setMotorAcceleration_from_parameter()
+{
+  setMotorAcceleration(asFloat(inParam1));
+}
+//////////////////////////////////////////////////////////////////
+// Change Stepper motor acceleration							//
+//////////////////////////////////////////////////////////////////
+void setMotorAcceleration(float accel)
+{
+  currentAcceleration = accel;
+  setAcceleration(currentAcceleration , SX);
+  setAcceleration(currentAcceleration , DX);
+  Serial_print("New acceleration: " , 0);
+  ltoa(currentAcceleration, temp_char);
+  Serial_print(temp_char , 1);
+}
+//////////////////////////////////////////////////////////////////
+// Change Stepper motor acceleration							//
+//////////////////////////////////////////////////////////////////
+void changeMotorAcceleration()
+{
+  float speedChange = asFloat(inParam1);
+  float newAccel = currentAcceleration + speedChange;
+  setMotorAcceleration(newAccel);
+}
+//////////////////////////////////////////////////////////////////
+// Change pen width												//
+//////////////////////////////////////////////////////////////////
+void changePenWidth()
+{
+  penWidth = asFloat(inParam1);
+  Serial_print("Changed Pen width to " , 0);
+  ltoa(penWidth,temp_char);
+  Serial_print(temp_char , 0);
+  Serial_print("mm" , 1);
+}
+//////////////////////////////////////////////////////////////////
+// Change Drawing Direction										//
+//////////////////////////////////////////////////////////////////
+void changeDrawingDirection() 
+{
+  globalDrawDirectionMode = asInt(inParam1);
+  globalDrawDirection = asInt(inParam2);
+  PRINT("Changed draw direction mode to be " , 0)
+  if(!polargraph_standalone) itoa(globalDrawDirectionMode, temp_char, 10);
+  PRINT(temp_char , 0)
+  PRINT(" and direction is " , 0)
+  if(!polargraph_standalone) itoa(globalDrawDirection, temp_char, 10);
+  PRINT(temp_char , 1)
+}
+//////////////////////////////////////////////////////////////////
+// Extract parameters from received Command						//
+//////////////////////////////////////////////////////////////////
+void extractParams(char* inS) {
+
+    // get number of parameters
+    // by counting commas
+    unsigned char length = strlen(inS);
+    unsigned char startPos = 0;
+    unsigned char paramNumber = 0;
+    unsigned char i;
+    //char* param;
+    
+    for(i=0; i<cmd_lenght; i++){
+    	inCmd[i] = 0;
+    }
+    for(i=0; i<param_lenght; i++){
+    	inParam1[i] = 0;
+    	inParam2[i] = 0;
+    	inParam3[i] = 0;
+    	inParam4[i] = 0;
+    }
+    
+    for (i = 0; i < length; i++) {
+      if (inS[i] == ',') {
+                
+        switch(paramNumber) {
+          case 0:
+          	substring(inS, inCmd, startPos, i);
+            //inCmd = param;
+            break;
+          case 1:
+          	substring(inS, inParam1, startPos, i);
+            //inParam1 = param;
+            break;
+          case 2:
+            substring(inS, inParam2, startPos, i);
+            //inParam2 = param;
+            break;
+          case 3:
+            substring(inS, inParam3, startPos, i);
+            //inParam3 = param;
+            break;
+          case 4:
+            substring(inS, inParam4, startPos, i);
+            //inParam4 = param;
+            break;
+          default:
+            break;
+        }
+        paramNumber++;
+        startPos = i+1;
+      }
+    }
+    inNoOfParams = paramNumber;
+    
+    //Serial_print("Command:" , 0);
+    //Serial_print(inCmd , 0);
+    //Serial_print(", p1:" , 0);
+    //Serial_print(inParam1 , 0);
+    //Serial_print(", p2:" , 0);
+    //Serial_print(inParam2 , 0);
+    //Serial_print(", p3:" , 0);
+    //Serial_print(inParam3 , 0);
+    //Serial_print(", p4:" , 0);
+    //Serial_print(inParam4 , 1);
+}
+//////////////////////////////////////////////////////////////////
+// Test Pattern													//
+//////////////////////////////////////////////////////////////////
+void testPattern()
+{
+    int rowWidth = asInt(inParam1);
+    int noOfIncrements = asInt(inParam2);
+    int w,i;
+    unsigned char ltr = true;
+    
+    for (w = rowWidth; w < (w+(noOfIncrements*5)); w+=5)
+    {
+      for (i = 0;  i <= maxDensity(penWidth, w); i++)
+      {
+        drawSquarePixel(w, w, i, ltr);
+      }
+      if (ltr)
+        ltr = false;
+      else
+        ltr = true;
+        
+      moveB(w);
+    }
+}
+//////////////////////////////////////////////////////////////////
+// Test Pen Width												//
+//////////////////////////////////////////////////////////////////
+void testPenWidth()
+{
+    int rowWidth = asInt(inParam1);
+    float startWidth = asFloat(inParam2);
+    float endWidth = asFloat(inParam3); 
+    float incSize = asFloat(inParam4);
+	float pw;
+	int i;
+
+    int tempDirectionMode = globalDrawDirectionMode;
+    globalDrawDirectionMode = DIR_MODE_PRESET;
+    
+    float oldPenWidth = penWidth;
+    int iterations = 0;
+    
+    for (pw = startWidth; pw <= endWidth; pw+=incSize)
+    {
+      iterations++;
+      penWidth = pw;
+      int maxDens = maxDensity(penWidth, rowWidth);
+//      Serial.print(F("Penwidth test "));
+//      Serial.print(iterations);
+//      Serial.print(F(", pen width: "));
+//      Serial.print(penWidth);
+//      Serial.print(F(", max density: "));
+//      Serial.println(maxDens);
+      drawSquarePixel(rowWidth, rowWidth, maxDens, DIR_SE);
+	}
+
+    penWidth = oldPenWidth;
+    
+    moveB(0-rowWidth);
+    for (i = 1; i <= iterations; i++)
+    {
+      moveB(0-(rowWidth/2));
+      moveA(0-rowWidth);
+      moveB(rowWidth/2);
+    }
+    
+    penWidth = oldPenWidth;
+    globalDrawDirectionMode = tempDirectionMode;
+}
+//////////////////////////////////////////////////////////////////
+// Test Pen Width Scribble										//
+//////////////////////////////////////////////////////////////////
+void testPenWidthScribble()
+{
+    int rowWidth = asInt(inParam1);
+    float startWidth = asFloat(inParam2);
+    float endWidth = asFloat(inParam3); 
+    float incSize = asFloat(inParam4);
+    
+    //unsigned char ltr = true;
+    float pw;
+    int density , i;
+    float oldPenWidth = penWidth;
+    int iterations = 0;
+    long posA = currentPosition(SX);
+    long posB = currentPosition(DX);
+    //long startColumn = posA;
+    long startRow = posB;
+    
+    for (pw = startWidth; pw <= endWidth; pw+=incSize)
+    {
+      iterations++;
+      //int column = posA;
+      
+      penWidth = pw;
+      int maxDens = maxDensity(penWidth, rowWidth);
+//      Serial.print(F("Penwidth test "));
+//      Serial.print(iterations);
+//      Serial.print(F(", pen width: "));
+//      Serial.print(penWidth);
+//      Serial.print(F(", max density: "));
+//      Serial.println(maxDens);
+      for (density = maxDens; density >= 0; density--)
+      {
+        drawScribblePixel(posA, posB, rowWidth, density);
+        posB+=rowWidth;
+      } 
+      posA+=rowWidth;
+      posB = startRow;
+    }    
+    changeLength(posA-(rowWidth/2), startRow-(rowWidth/2));
+    penWidth = oldPenWidth;
+    moveB(0-rowWidth);
+    for (i = 1; i <= iterations; i++)
+    {
+      moveB(0-(rowWidth/2));
+      moveA(0-rowWidth);
+      moveB(rowWidth/2);
+    }
+    penWidth = oldPenWidth;
+}
+//////////////////////////////////////////////////////////////////
+// Draw a Rectangle												//
+//////////////////////////////////////////////////////////////////
+void drawRectangle()
+{
+    long v1A = asLong(inParam1);
+    long v1B = asLong(inParam2);
+    long v2A = asLong(inParam3);
+    long v2B = asLong(inParam4);
+    
+    changeLength(v1A, v1B);
+    moveTo(v2A, SX);
+    runToPosition(SX);
+    
+    moveTo(v2B, DX);
+    runToPosition(DX);
+    
+    moveTo(v1A, SX);
+    runToPosition(SX);
+    
+    moveTo(v1B, DX);
+    runToPosition(DX);
+}
+//////////////////////////////////////////////////////////////////
+// move until reach final position								//
+//////////////////////////////////////////////////////////////////
+void runToPosition(unsigned char side)
+{
+	while (run(side));
+}
+//////////////////////////////////////////////////////////////////
+// Change lenght Command										//
+//////////////////////////////////////////////////////////////////
+void changeLength()
+{
+  long lenA = asLong(inParam1);
+  long lenB = asLong(inParam2);
+  
+  if (lenA == 0)
+    lenA = 10;
+  if (lenB == 0)
+    lenB = 10;
+
+  changeLength_long(lenA, lenB);
+}  
+//////////////////////////////////////////////////////////////////
+// Change lenght long integer									//
+//////////////////////////////////////////////////////////////////
+void changeLength_long(long tA, long tB)
+{
+  moveTo(tA , SX);
+  moveTo(tB , DX);
+    
+  while (distanceToGo_function(SX) != 0 || distanceToGo_function(DX) != 0)
+  {
+    run(SX);
+    run(DX);
+  }
+  if(!polargraph_standalone) reportPosition();
+}
+//////////////////////////////////////////////////////////////////
+// Change lenght floating point									//
+//////////////////////////////////////////////////////////////////
+void changeLength_float(float tA, float tB)
+{
+//  int intPos = (int)(tA+0.5);
+//  accelA.moveTo(intPos);
+//  intPos = (int)(tB+0.5);
+//  accelB.moveTo(intPos);
+
+  moveTo(tA , SX);
+  moveTo(tB , DX);
+  
+  while (distanceToGo_function(SX) != 0 || distanceToGo_function(DX) != 0)
+  {
+    run(SX);
+    run(DX);
+  }
+  if(!polargraph_standalone) reportPosition();
+}
+//void changeLengthRelative(long tA, long tB)
+//{
+//  accelA.move(tA);
+//  accelB.move(tB);
+//  
+//  while (accelA.distanceToGo() != 0 || accelB.distanceToGo() != 0)
+//  {
+//    accelA.run();
+//    accelB.run();
+//  }
+//  
+//  reportPosition();
+//}
+//////////////////////////////////////////////////////////////////
+// Get Max Lenght												//
+//////////////////////////////////////////////////////////////////
+long getMaxLength()
+{
+  if (maxLength == 0)
+  {
+    float length = getMachineA(machineWidth * stepsPerMM, machineHeight * stepsPerMM);
+    maxLength = (long)(length+0.5);
+  }
+  return maxLength;
+}
+//////////////////////////////////////////////////////////////////
+// Change Lenght Direct											//
+//////////////////////////////////////////////////////////////////
+void changeLengthDirect()
+{
+  float endA = asFloat(inParam1);
+  float endB = asFloat(inParam2);
+  int maxSegmentLength = asInt(inParam3);
+
+  float startA = currentPosition(SX);
+  float startB = currentPosition(DX);
+  //  Serial_print("Drawing direct line" , 1);
+
+  if (endA < 20 || endB < 20 || endA > getMaxLength() | endB > getMaxLength())
+  {
+    Serial_print("This point falls outside the area of this machine. Skipping it." , 1);
+  }
+  else
+  {
+    drawBetweenPoints(startA, startB, endA, endB, maxSegmentLength);
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Thanks to Andy Kinsman for help with this method.														//
+//																										//
+//This moves the gondola in a straight line between p1 and p2.  Both input coordinates are in 			//
+//the native coordinates system.  																		//
+//																										//
+//The fidelity of the line is controlled by maxLength - this is the longest size a line segment is 		//
+//allowed to be.  1 is finest, slowest.  Use higher values for faster, wobblier.						//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmentLength)
+{
+  // ok, we're going to plot some dots between p1 and p2.  Using maths. I know! Brave new world etc.
+  reportingPosition = false;
+  
+  // First, convert these values to cartesian coordinates
+  // We're going to figure out how many segments the line
+  // needs chopping into.
+  float c1x = getCartesianXFP(p1a, p1b);
+  float c1y = getCartesianYFP(c1x, p1a);
+  
+  float c2x = getCartesianXFP(p2a, p2b);
+  float c2y = getCartesianYFP(c2x, p2a);
+  
+  // test to see if it's on the page
+  if (c2x > 20 && c2x<pageWidth-20 && c2y > 20 && c2y <pageHeight-20)
+  {
+    float deltaX = c2x-c1x;    // distance each must move (signed)
+    float deltaY = c2y-c1y;
+  
+    int linesegs = 1;            // assume at least 1 line segment will get us there.
+    if (abs(deltaX) > abs(deltaY))
+    {
+      // slope <=1 case    
+      while ((abs(deltaX)/linesegs) > maxSegmentLength)
+      {
+        linesegs++;
+      }
+    }
+    else
+    {
+      // slope >1 case
+      while ((abs(deltaY)/linesegs) > maxSegmentLength)
+      {
+        linesegs++;
+      }
+    }
+    
+    // reduce delta to one line segments' worth.
+    deltaX = deltaX/linesegs;
+    deltaY = deltaY/linesegs;
+  
+    // render the line in N shorter segments
+    while (linesegs > 0)
+    {
+      // compute next new location
+      c1x = c1x + deltaX;
+      c1y = c1y + deltaY;
+  
+      // convert back to machine space
+      float pA = getMachineA(c1x, c1y);
+      float pB = getMachineB(c1x, c1y);
+    
+      // do the move
+      useAcceleration(false);
+      changeLength_float(pA, pB);
+  
+      // one line less to do!
+      linesegs--;
+    }
+    
+    // do the end point in case theres been some rounding errors etc
+    reportingPosition = true;
+    changeLength_float(p2a, p2b);
+    useAcceleration(true);
+  }
+  else
+  {
+    Serial_print("Line is not on the page. Skipping it." , 1);
+  }
+  outputAvailableMemory();
+}
+//////////////////////////////////////////////////////////////////
+// Use Accelaration												//
+//////////////////////////////////////////////////////////////////
+void useAcceleration(unsigned char use)
+{
+  if (use)
+  {
+    setAcceleration(currentAcceleration , SX);
+    setAcceleration(currentAcceleration , DX);
+  }
+  else
+  {
+    setAcceleration(SUPERFAST_ACCELERATION , SX);
+    setAcceleration(SUPERFAST_ACCELERATION , DX);
+  }
+}
+//////////////////////////////////////////////////////////////////
+// set stepper acceleration										//
+//////////////////////////////////////////////////////////////////
+void setAcceleration(float Acceleration , unsigned char side){
+	acceleration[side] = Acceleration;
+	computeNewSpeed(side);
+}
+//////////////////////////////////////////////////////////////////
+// get machine A lenght											//
+//////////////////////////////////////////////////////////////////
+float getMachineA(float cX, float cY)
+{
+  //float a = sqrt(pow(cX,2)+pow(cY,2));
+  float a = sqrt(cX*cX + cY*cY);
+  return a;
+}
+//////////////////////////////////////////////////////////////////
+// get machine B lenght											//
+//////////////////////////////////////////////////////////////////
+float getMachineB(float cX, float cY)
+{
+  //float b = sqrt(pow((pageWidth)-cX,2)+pow(cY,2));
+  float b = sqrt((pageWidth-cX)*(pageWidth-cX) + cY*cY);
+  return b;
+}
+//////////////////////////////////////////////////////////////////
+// Test direction Square										//
+//////////////////////////////////////////////////////////////////
+void drawTestDirectionSquare()
+{
+  int rowWidth = asInt(inParam1);
+  int segments = asInt(inParam2);
+  drawSquarePixel(rowWidth, rowWidth, segments, DIR_SE);
+  moveA(rowWidth*2);
+  
+  drawSquarePixel(rowWidth, rowWidth, segments, DIR_SW);
+  moveB(rowWidth*2);
+  
+  drawSquarePixel(rowWidth, rowWidth, segments, DIR_NW);
+  moveA(0-(rowWidth*2));
+  
+  drawSquarePixel(rowWidth, rowWidth, segments, DIR_NE);
+  moveB(0-(rowWidth*2));
+  
+}
+//////////////////////////////////////////////////////////////////
+// Draw Square Pixel from command parameters					//
+//////////////////////////////////////////////////////////////////
+void drawSquarePixel_command() 
+{
+    long originA = asLong(inParam1);
+    long originB = asLong(inParam2);
+    int size = asInt(inParam3);
+    int density = asInt(inParam4);
+
+    int halfSize = size / 2;
+    
+    long startPointA;
+    long startPointB;
+    long endPointA;
+    long endPointB;
+
+    int calcFullSize = halfSize * 2; // see if there's any rounding errors
+    int offsetStart = size - calcFullSize;
+    
+    if (globalDrawDirectionMode == DIR_MODE_AUTO)
+      globalDrawDirection = getAutoDrawDirection(originA, originB, currentPosition(SX), currentPosition(DX));
+      
+
+    if (globalDrawDirection == DIR_SE) 
+    {
+//      Serial.println(F("d: SE"));
+      startPointA = originA - halfSize;
+      startPointA += offsetStart;
+      startPointB = originB;
+      endPointA = originA + halfSize;
+      endPointB = originB;
+    }
+    else if (globalDrawDirection == DIR_SW)
+    {
+//      Serial.println(F("d: SW"));
+      startPointA = originA;
+      startPointB = originB - halfSize;
+      startPointB += offsetStart;
+      endPointA = originA;
+      endPointB = originB + halfSize;
+    }
+    else if (globalDrawDirection == DIR_NW)
+    {
+//      Serial.println(F("d: NW"));
+      startPointA = originA + halfSize;
+      startPointA -= offsetStart;
+      startPointB = originB;
+      endPointA = originA - halfSize;
+      endPointB = originB;
+    }
+    else //(drawDirection == DIR_NE)
+    {
+//      Serial.println(F("d: NE"));
+      startPointA = originA;
+      startPointB = originB + halfSize;
+      startPointB -= offsetStart;
+      endPointA = originA;
+      endPointB = originB - halfSize;
+    }
+
+    density = scaleDensity(density, 255, maxDensity(penWidth, size));
+//    Serial.print(F("Start point: "));
+//    Serial.print(startPointA);
+//    Serial.print(COMMA);
+//    Serial.print(startPointB);
+//    Serial.print(F(". end point: "));
+//    Serial.print(endPointA);
+//    Serial.print(COMMA);
+//    Serial.print(endPointB);
+//    Serial.println(F("."));
+    
+    changeLength_long(startPointA, startPointB);
+    if (density > 1)
+    {
+      drawSquarePixel(size, size, density, globalDrawDirection);
+    }
+    changeLength_long(endPointA, endPointB);
+    
+    outputAvailableMemory(); 
+}
+//////////////////////////////////////////////////////////////////
+// Random Draw Direction										//
+//////////////////////////////////////////////////////////////////
+unsigned char getRandomDrawDirection()
+{
+  return random(1, 5);
+}
+//////////////////////////////////////////////////////////////////
+// Get Draw Direction											//
+//////////////////////////////////////////////////////////////////
+unsigned char getAutoDrawDirection(long targetA, long targetB, long sourceA, long sourceB)
+{
+  unsigned char dir = DIR_SE;
+  
+// some bitchin triangles, I goshed-well love triangles.
+//  long diffA = sourceA - targetA;
+//  long diffB = sourceB - targetB;
+//  long hyp = sqrt(sq(diffA)+sq(diffB));
+//  
+//  float bearing = atan(hyp/diffA);
+  
+//  Serial.print("bearing:");
+//  Serial.println(bearing);
+//  
+//  Serial.print(F("TargetA: "));
+//  Serial.print(targetA);
+//  Serial.print(F(", targetB: "));
+//  Serial.print(targetB);
+//  Serial.print(F(". SourceA: "));
+//  Serial.print(sourceA);
+//  Serial.print(F(", sourceB: "));
+//  Serial.print(sourceB);
+//  Serial.println(F("."));
+ 
+  if (targetA<sourceA && targetB<sourceA)
+  {
+//    Serial.println(F("calculated NW"));
+    dir = DIR_NW;
+  }
+  else if (targetA>sourceA && targetB>sourceB)
+  {
+//    Serial.println(F("calculated SE"));
+    dir = DIR_SE;
+  }
+  else if (targetA<sourceA && targetB>sourceB)
+  {
+//    Serial.println(F("calculated SW"));
+    dir = DIR_SW;
+  }
+  else if (targetA>sourceA && targetB<sourceB)
+  {
+//    Serial.println(F("calculated NE"));
+    dir = DIR_NE;
+  }
+  else if (targetA==sourceA && targetB<sourceB)
+  {
+//    Serial.println(F("calc NE"));
+    dir = DIR_NE;
+  }
+  else if (targetA==sourceA && targetB>sourceB)
+  {
+//    Serial.println(F("calc SW"));
+    dir = DIR_SW;
+  }
+  else if (targetA<sourceA && targetB==sourceB)
+  {
+//    Serial.println(F("calc NW"));
+    dir = DIR_NW;
+  }
+  else if (targetA>sourceA && targetB==sourceB)
+  {
+//    Serial.println(F("calc SE"));
+    dir = DIR_SE;
+  }
+  else
+  {
+//    Serial.println("Not calculated - default SE");
+  }
+  return dir;
+}
+//////////////////////////////////////////////////////////////////
+// Draw Scribble Pixel from command parameters					//
+//////////////////////////////////////////////////////////////////
+void drawScribblePixel_from_command()
+{
+    long originA = asLong(inParam1);
+    long originB = asLong(inParam2);
+    int size = asInt(inParam3);
+    int density = asInt(inParam4);
+    
+    int maxDens = maxDensity(penWidth, size);
+
+    density = scaleDensity(density, 255, maxDens);
+    drawScribblePixel(originA, originB, size*1.1, density);
+    
+    outputAvailableMemory(); 
+}
+//////////////////////////////////////////////////////////////////
+// Draw Scribble Pixel											//
+//////////////////////////////////////////////////////////////////
+void drawScribblePixel(long originA, long originB, int size, int density)
+{
+//  int originA = accelA.currentPosition();
+//  int originB = accelB.currentPosition();
+  
+  long lowLimitA = originA-(size/2);
+  long highLimitA = lowLimitA+size;
+  long lowLimitB = originB-(size/2);
+  //long highLimitB = lowLimitB+size;
+  int randA;
+  int randB;
+  int i;
+  
+  int inc = 0;
+  int currSize = size;
+  
+  for (i = 0; i <= density; i++)
+  {
+    randA = random(0, currSize);
+    randB = random(0, currSize);
+    changeLength_long(lowLimitA+randA, lowLimitB+randB);
+    
+    lowLimitA-=inc;
+    highLimitA+=inc;
+    currSize+=inc*2;
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Return random number from min to max							//
+//////////////////////////////////////////////////////////////////
+int random(int min, int max)
+{
+	int num = rand();
+	return ((num % (max-min)) + min);
+}
+//int minSegmentSizeForPen(float penSize)
+//{
+//  float penSizeInSteps = penSize * stepsPerMM;
+//
+//  int minSegSize = 1;
+//  if (penSizeInSteps >= 2.0)
+//    minSegSize = int(penSizeInSteps);
+//    
+////  Serial.print(F("Min segment size for penSize "));
+////  Serial.print(penSize);
+////  Serial.print(F(": "));
+////  Serial.print(minSegSize);
+////  Serial.print(F(" steps."));
+////  Serial.println();
+//  
+//  return minSegSize;
+//}
+//////////////////////////////////////////////////////////////////
+// get Max Density												//
+//////////////////////////////////////////////////////////////////
+int maxDensity(float penSize, int rowSize)
+{
+  float rowSizeInMM = mmPerStep * rowSize;
+  PRINT("rowsize in mm: " , 0)
+  if(!polargraph_standalone) ltoa(rowSizeInMM,temp_char);
+  PRINT(temp_char , 1)
+//  Serial.print(F(", mmPerStep: "));
+//  Serial.print(mmPerStep);
+//  Serial.print(F(", rowsize: "));
+//  Serial.println(rowSize);
+  
+  float numberOfSegments = rowSizeInMM / penSize;
+  int maxDens = 1;
+  if (numberOfSegments >= 2.0)
+    maxDens = (int)numberOfSegments;
+    
+//  Serial.print("num of segments float:");
+//  Serial.println(numberOfSegments);
+  PRINT("Max density: ",0)
+  if(!polargraph_standalone) itoa(maxDens,temp_char,10);
+  PRINT(temp_char, 1)
+//  Serial.print(F(", rowSize: "));
+//  Serial.print(rowSize);
+//  Serial.println(maxDens);  
+  return maxDens;
+}
+//////////////////////////////////////////////////////////////////
+// Scale Density												//
+//////////////////////////////////////////////////////////////////
+int scaleDensity(int inDens, int inMax, int outMax)
+{
+  float reducedDens = ((float)inDens / (float)inMax) * (float)outMax;
+  reducedDens = outMax-reducedDens;
+//  Serial.print(F("inDens:"));
+//  Serial.print(inDens);
+//  Serial.print(F(", inMax:"));
+//  Serial.print(inMax);
+//  Serial.print(F(", outMax:"));
+//  Serial.print(outMax);
+//  Serial.print(F(", reduced:"));
+//  Serial.println(reducedDens);
+  
+  // round up if bigger than .5
+  int result = (int)(reducedDens);
+  if (reducedDens - (result) > 0.5)
+    result ++;
+  
+  return result;
+}
+//////////////////////////////////////////////////////////////////
+// Draw Square Pixel											//
+//////////////////////////////////////////////////////////////////
+void drawSquarePixel(int length, int width, int density, unsigned char drawDirection) 
+{
+  // work out how wide each segment should be
+  int segmentLength = 0;
+  int i;
+
+  if (density > 0)
+  {
+    // work out some segment widths
+    int basicSegLength = length / density;
+    int basicSegRemainder = length % density;
+    float remainderPerSegment = (float)basicSegRemainder / (float)density;
+    float totalRemainder = 0.0;
+    int lengthSoFar = 0;
+    
+//    Serial.print("Basic seg length:");
+//    Serial.print(basicSegLength);
+//    Serial.print(", basic seg remainder:");
+//    Serial.print(basicSegRemainder);
+//    Serial.print(", remainder per seg");
+//    Serial.println(remainderPerSegment);
+    
+    for (i = 0; i <= density; i++) 
+    {
+      totalRemainder += remainderPerSegment;
+
+      if (totalRemainder >= 1.0)
+      {
+        totalRemainder -= 1.0;
+        segmentLength = basicSegLength+1;
+      }
+      else
+      {
+        segmentLength = basicSegLength;
+      }
+
+      if (drawDirection == DIR_SE) {
+        drawSquareWaveAlongA(width, segmentLength, density, i);
+      }
+      if (drawDirection == DIR_SW) {
+        drawSquareWaveAlongB(width, segmentLength, density, i);
+      }
+      if (drawDirection == DIR_NW) {
+        segmentLength = 0 - segmentLength; // reverse
+        drawSquareWaveAlongA(width, segmentLength, density, i);
+      }
+      if (drawDirection == DIR_NE) {
+        segmentLength = 0 - segmentLength; // reverse
+        drawSquareWaveAlongB(width, segmentLength, density, i);
+      }
+      lengthSoFar += segmentLength;
+    //      Serial.print("distance so far:");
+    //      Serial.print(distanceSoFar);
+      if(!polargraph_standalone) reportPosition();
+    } // end of loop
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Draw Square Wave A long A									//
+//////////////////////////////////////////////////////////////////
+void drawSquareWaveAlongA(int waveAmplitude, int waveLength, int totalWaves, int waveNo)
+{
+  if (waveNo == 0) 
+  { 
+    // first one, half a line and an along
+    PRINT("First wave half" , 1)
+    if (lastWaveWasTop) {
+      moveB(waveAmplitude/2);
+      moveA(waveLength);
+    }
+    else {
+      moveB(0-(waveAmplitude/2));
+      moveA(waveLength);
+    }
+    flipWaveDirection();
+  }
+  else if (waveNo == totalWaves) 
+  { 
+    // last one, half a line with no along
+	PRINT("Last wave half" , 1)
+    if (lastWaveWasTop) {
+      moveB(waveAmplitude/2);
+    }
+    else {
+      moveB(0-(waveAmplitude/2));
+    }
+  }
+  else 
+  { 
+    // intervening lines - full lines, and an along
+	PRINT("Intermediate waves" , 1)
+    if (lastWaveWasTop) {
+      moveB(waveAmplitude);
+      moveA(waveLength);
+    }
+    else {
+      moveB(0-waveAmplitude);
+      moveA(waveLength);
+    }
+    flipWaveDirection();
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Draw Square Wave A long B									//
+//////////////////////////////////////////////////////////////////
+void drawSquareWaveAlongB(int waveAmplitude, int waveLength, int totalWaves, int waveNo)
+{
+  if (waveNo == 0) 
+  { 
+    // first one, half a line and an along
+	PRINT("First wave half" , 1)
+    if (lastWaveWasTop) {
+      moveA(waveAmplitude/2);
+      moveB(waveLength);
+    }
+    else {
+      moveA(0-(waveAmplitude/2));
+      moveB(waveLength);
+    }
+    flipWaveDirection();
+  }
+  else if (waveNo == totalWaves) 
+  { 
+    // last one, half a line with no along
+	PRINT("Last wave half" , 1)
+    if (lastWaveWasTop) {
+      moveA(waveAmplitude/2);
+    }
+    else {
+      moveA(0-(waveAmplitude/2));
+    }
+  }
+  else 
+  { 
+    // intervening lines - full lines, and an along
+	PRINT("Intermediate waves" , 1)
+    if (lastWaveWasTop) {
+      moveA(waveAmplitude);
+      moveB(waveLength);
+    }
+    else {
+      moveA(0-waveAmplitude);
+      moveB(waveLength);
+    }
+    flipWaveDirection();
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Flip Wave Direction											//
+//////////////////////////////////////////////////////////////////
+void flipWaveDirection()
+{
+  if (lastWaveWasTop)
+    lastWaveWasTop = false;
+  else
+    lastWaveWasTop = true;
+}
+//////////////////////////////////////////////////////////////////
+// Move A (SX)													//
+//////////////////////////////////////////////////////////////////
+void moveA(long dist)
+{
+  move(dist, SX);
+  while (distanceToGo_function(SX) != 0)
+    run(SX);
+}
+//////////////////////////////////////////////////////////////////
+// Move B (DX)													//
+//////////////////////////////////////////////////////////////////
+void moveB(long dist)
+{
+  move(dist , DX);
+  while (distanceToGo_function(DX) != 0)
+    run(DX);
+}
+long distanceToGo_function(unsigned char side)
+{
+    return target_pos[side] - current_pos[side];
+}
+//////////////////////////////////////////////////////////////////
+// Run from current position to destination						//
+// This function do the step									//
+//////////////////////////////////////////////////////////////////
+unsigned char run(unsigned char side)
+{
+	if (target_pos[side] == current_pos[side])
+	return false;
+    
+    if (runSpeed(side))
+	computeNewSpeed(side);
+    return true;
+}
+// Implements steps according to the current speed
+// You must call this at least once per step
+// returns true if a step occurred
+unsigned char runSpeed(unsigned char side)
+{
+    unsigned long time = millis();
+  
+    if (time > lastStepTime[side] + stepInterval[side])
+    {
+	if (speed[side] > 0)
+	{
+	    // Clockwise
+	    current_pos[side] += 1;
+	}
+	else if (speed[side] < 0)
+	{
+	    // Anticlockwise  
+	    current_pos[side] -= 1;
+	}
+	step(current_pos[side] & 0x3 , side); // Bottom 2 bits (same as mod 4, but works with + and - numbers) 
+
+	lastStepTime[side] = time;
+	return true;
+    }
+    else
+	return false;
+}
+// Subclasses can override
+void step(unsigned int step, unsigned char side)  // ???????????
+{
+	//digitalWrite(_pin2, _speed > 0); // Direction
+    // Caution 200ns setup time 
+    //digitalWrite(_pin1, HIGH);
+    // Caution, min Step pulse width for 3967 is 1microsec
+    // Delay 1microsec
+    //delayMicroseconds(1);
+    //digitalWrite(_pin1, LOW);
+    if(side)
+    {
+    	if(speed[side] > 0)
+    		dx_stepper_port_out |= dx_stepper_dir;
+    	else dx_stepper_port_out &= ~dx_stepper_dir;
+    	delay_us(1);
+    	dx_stepper_port_out |= dx_stepper_step;
+    	delay_us(5);
+    	dx_stepper_port_out &= ~dx_stepper_step;
+    }
+    else
+    {
+    	if(speed[side] > 0)
+    		sx_stepper_port_out |= sx_stepper_dir;
+    	else sx_stepper_port_out &= ~sx_stepper_dir;
+    	delay_us(1);
+    	sx_stepper_port_out |= sx_stepper_step;
+    	delay_us(5);
+    	sx_stepper_port_out &= ~sx_stepper_step;
+    }
+}
+//////////////////////////////////////////////////////////////////
+// Compute new speed											//
+//////////////////////////////////////////////////////////////////
+void computeNewSpeed(unsigned char side)
+{
+    setSpeed(desiredSpeed(side) , side);
+}
+void setSpeed(float speed_target , unsigned char side)
+{
+    speed[side] = speed_target;
+    stepInterval[side] = abs(1000.0 / speed[side]);
+}
+// Work out and return a new speed.
+// Subclasses can override if they want
+// Implement acceleration, deceleration and max speed
+// Negative speed is anticlockwise
+// This is called:
+//  after each step
+//  after user changes:
+//   maxSpeed
+//   acceleration
+//   target position (relative or absolute)
+float desiredSpeed(unsigned char side)
+{
+    long distanceTo = distanceToGo_function(side);
+
+    // Max possible speed that can still decelerate in the available distance
+    float requiredSpeed;
+    if (distanceTo == 0)
+	return 0.0; // Were there
+    else if (distanceTo > 0) // Clockwise
+	requiredSpeed = sqrt(2.0 * distanceTo * acceleration[side]);
+    else  // Anticlockwise
+	requiredSpeed = -sqrt(2.0 * -distanceTo * acceleration[side]);
+
+    if (requiredSpeed > speed[side])
+    {
+	// Need to accelerate in clockwise direction
+	if (speed[side] == 0)
+	    requiredSpeed = sqrt(2.0 * acceleration[side]);
+	else
+	    requiredSpeed = speed[side] + abs(acceleration[side] / speed[side]);
+	if (requiredSpeed > maxSpeed[side])
+	    requiredSpeed = maxSpeed[side];
+    }
+    else if (requiredSpeed < speed[side])
+    {
+	// Need to accelerate in anticlockwise direction
+	if (speed[side] == 0)
+	    requiredSpeed = -sqrt(2.0 * acceleration[side]);
+	else
+	    requiredSpeed = speed[side] - abs(acceleration[side] / speed[side]);
+	if (requiredSpeed < - maxSpeed[side])
+	    requiredSpeed = - maxSpeed[side];
+    }
+//  Serial.println(requiredSpeed);
+    return requiredSpeed;
+}
+//////////////////////////////////////////////////////////////////
+// Move relative from current position							//
+//////////////////////////////////////////////////////////////////
+void move(long relative , unsigned char side)
+{
+	moveTo(current_pos[side] + relative , side);
+}
+//////////////////////////////////////////////////////////////////
+// move to new position											//
+//////////////////////////////////////////////////////////////////
+void moveTo(long destination , unsigned char side)
+{
+	target_pos[side] = destination;
+	computeNewSpeed(side);
+}
+//////////////////////////////////////////////////////////////////
+// Return current position										//
+//////////////////////////////////////////////////////////////////
+long currentPosition(unsigned char side)
+{
+    return current_pos[side];//_currentPos;
+}
+//////////////////////////////////////////////////////////////////
+// Print out current position									//
+//////////////////////////////////////////////////////////////////
+void reportPosition()
+{
+	long pos_sx, pos_dx;
+  if (reportingPosition)
+  {
+    PRINT(OUT_CMD_SYNC , 0)
+    pos_sx = currentPosition(SX);
+    if(!polargraph_standalone) ltoa(pos_sx,temp_char);
+    PRINT(temp_char , 0)
+    PRINT(COMMA , 0)
+    pos_dx = currentPosition(DX);
+    if(!polargraph_standalone) ltoa(pos_dx,temp_char);
+    PRINT(temp_char , 0)
+    PRINT(CMD_END , 1)
+    
+  //  int cX = getCartesianX();
+  //  int cY = getCartesianY(cX, accelA.currentPosition());
+  //  Serial.print(OUT_CMD_CARTESIAN);
+  //  Serial.print(cX*mmPerStep);
+  //  Serial.print(COMMA);
+  //  Serial.print(cY*mmPerStep);
+  //  Serial.println(CMD_END);
+  //
+    outputAvailableMemory();
+  }
+}
+//////////////////////////////////////////////////////////////////
+// Set position													//
+//////////////////////////////////////////////////////////////////
+void setPosition()
+{
+  long targetA = asLong(inParam1);
+  long targetB = asLong(inParam2);
+
+  setCurrentPosition(targetA , SX);
+  setCurrentPosition(targetB , DX);
+  
+  engageMotors();  
+  reportPosition();
+}
+//////////////////////////////////////////////////////////////////
+// Set Current Position											//
+//////////////////////////////////////////////////////////////////
+void setCurrentPosition(long Position , unsigned char side)
+{
+	current_pos[side] = Position;
+}
+//////////////////////////////////////////////////////////////////
+// Engage Motors												//
+//////////////////////////////////////////////////////////////////
+void engageMotors()
+{
+	sx_stepper_port_out &= ~sx_stepper_enable;
+	dx_stepper_port_out &= ~dx_stepper_enable;
+	//runToNewPosition(currentPosition(SX)+4 , SX);
+	//runToNewPosition(currentPosition(DX)+4 , DX);
+	//runToNewPosition(currentPosition(SX)-4 , SX);
+	//runToNewPosition(currentPosition(DX)-4 , DX);
+}
+//////////////////////////////////////////////////////////////////
+// Run to the new position										//
+//////////////////////////////////////////////////////////////////
+void runToNewPosition(long position , unsigned char side)
+{
+    moveTo(position , side);
+    runToPosition(side);
+}
+//////////////////////////////////////////////////////////////////
+// Get cartesian Y coordinate									//
+//////////////////////////////////////////////////////////////////
+void releaseMotors()
+{
+  penUp();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+// Get cartesian X coordinate									//
+//////////////////////////////////////////////////////////////////
+float getCartesianXFP(float aPos, float bPos)
+{
+  //float calcX = (pow(pageWidth, 2) - pow(bPos, 2) + pow(aPos, 2)) / (pageWidth*2);
+  float calcX = (pageWidth*pageWidth - bPos*bPos + aPos*aPos) / (pageWidth*2);
+  return calcX;  
+}
+//////////////////////////////////////////////////////////////////
+// Get cartesian Y coordinate									//
+//////////////////////////////////////////////////////////////////
+float getCartesianYFP(float cX, float aPos) 
+{
+  //float calcY = sqrt(pow(aPos,2)-pow(cX,2));
+  float calcY = sqrt(aPos*aPos - cX*cX);
+  return calcY;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+// Find Available Memory										//
+//from http://www.arduino.cc/playground/Code/AvailableMemory	//
+//////////////////////////////////////////////////////////////////
+int availableMemory() {
+  unsigned int *heapptr, *stackptr;
+  stackptr = (unsigned int*)malloc(4);
+  heapptr = stackptr;
+  free(stackptr);               
+  //stackptr = (unsigned int*)(SP);
+  stackptr = (void*) _get_SP_register();
+  return stackptr - heapptr;
+}
+//////////////////////////////////////////////////////////////////
+// Output Available Memory to Host								//
+//////////////////////////////////////////////////////////////////
+void outputAvailableMemory()
+{
+  long avMem = availableMemory();
+  if (avMem != availMem)
+  {
+    availMem = avMem;
+    PRINT(FREE_MEMORY_STRING , 0)
+    if(!polargraph_standalone) itoa(availMem,temp_char,10);
+    PRINT(temp_char , 0)
+    PRINT(CMD_END , 1)
+  }
+}
+/*
+//float rads(int n) {
+//  // Return an angle in radians
+//  return (n/180.0 * PI);
+//}    
+//
+//void drawCurve(float x, float y, float fx, float fy, float cx, float cy) {
+//  // Draw a Quadratic Bezier curve from (x, y) to (fx, fy) using control pt
+//  // (cx, cy)
+//  float xt=0;
+//  float yt=0;
+//
+//  for (float t=0; t<=1; t+=.0025) {
+//    xt = pow((1-t),2) *x + 2*t*(1-t)*cx+ pow(t,2)*fx;
+//    yt = pow((1-t),2) *y + 2*t*(1-t)*cy+ pow(t,2)*fy;
+//    changeLength(xt, yt);
+//  }  
+//}
+//                                                     
+//
+//void drawCircle(int centerx, int centery, int radius) {
+//  // Estimate a circle using 20 arc Bezier curve segments
+//  int segments =20;
+//  int angle1 = 0;
+//  int midpoint=0;
+//   
+//   changeLength(centerx+radius, centery);
+//
+//  for (float angle2=360/segments; angle2<=360; angle2+=360/segments) {
+//
+//    midpoint = angle1+(angle2-angle1)/2;
+//
+//    float startx=centerx+radius*cos(rads(angle1));
+//    float starty=centery+radius*sin(rads(angle1));
+//    float endx=centerx+radius*cos(rads(angle2));
+//    float endy=centery+radius*sin(rads(angle2));
+//    
+//    int t1 = rads(angle1)*1000 ;
+//    int t2 = rads(angle2)*1000;
+//    int t3 = angle1;
+//    int t4 = angle2;
+//
+//    drawCurve(startx,starty,endx,endy,
+//              centerx+2*(radius*cos(rads(midpoint))-.25*(radius*cos(rads(angle1)))-.25*(radius*cos(rads(angle2)))),
+//              centery+2*(radius*sin(rads(midpoint))-.25*(radius*sin(rads(angle1)))-.25*(radius*sin(rads(angle2))))
+//    );
+//    
+//    angle1=angle2;
+//  }
+//
+//}
+//
+//
+//              
+//void drawCircles(int number, int centerx, int centery, int r) {
+//   // Draw a certain number of concentric circles at the given center with
+//   // radius r
+//   int dr=0;
+//   if (number > 0) {
+//     dr = r/number;
+//     for (int k=0; k<number; k++) {
+//       drawCircle(centerx, centery, r);
+//       r=r-dr;
+//     }
+//   }
+//}
+//long getCartesianX(float aPos, float bPos)
+//{
+//  long calcX = long((pow(pageWidth, 2) - pow(bPos, 2) + pow(aPos, 2)) / (pageWidth*2));
+//  return calcX;  
+//}
+//
+//long getCartesianX() {
+//  long calcX = getCartesianX(accelA.currentPosition(), accelB.currentPosition());
+//  return calcX;  
+//}
+//
+//long getCartesianY() {
+//  return getCartesianY(getCartesianX(), accelA.currentPosition());
+//}
+//long getCartesianY(long cX, float aPos) {
+//  long calcY = long(sqrt(pow(aPos,2)-pow(cX,2)));
+//  return calcY;
+//}*/
+
+
+#endif /*POLARGRAPH_SERVER_H_*/
