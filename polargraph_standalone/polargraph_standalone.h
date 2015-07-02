@@ -3,7 +3,8 @@
 
 #include "pff2a/src/pff.h"
 
-#define MCLK_FREQUENCY      16000000
+#define BAUD_57600
+#define MCLK_FREQUENCY		16000000
 #define WDT_DIVIDER			8192
 
 #define WDT_FREQUENCY		(MCLK_FREQUENCY / WDT_DIVIDER) / 1000
@@ -38,18 +39,18 @@ int pause();
 
 // pins define
 // port1
-#define nok_reset BIT0
-#define nok_ce	  BIT1
-#define nok_sdin  BIT3
-#define nok_sclk  BIT2
+#define nok_reset	BIT0
+#define nok_ce		BIT1
+#define nok_sdin	BIT3
+#define nok_sclk	BIT2
 // serial
-#define TX BIT2
-#define RX BIT1
+#define TX			BIT2
+#define RX			BIT1
 // button
-#define left_btn BIT3
-#define right_btn BIT4
-#define right 0
-#define left 1
+#define left_btn	BIT3
+#define right_btn	BIT4
+#define right		0
+#define left		1
 
 // RX BUFFER
 #define rx_buffer_lenght 45
@@ -82,103 +83,109 @@ FILINFO fno;				/* File information */
 // Return milliseconds from power-up or reset
 //////////////////////////////////////////////////////////////////////////
 unsigned long millis(){
-  return wdtCounter / ((unsigned long)WDT_FREQUENCY);
+	return wdtCounter / ((unsigned long)WDT_FREQUENCY);
 }
 //////////////////////////////////////////////////////////////////////////
 // Pause for milliseconds
 //////////////////////////////////////////////////////////////////////////
 void delayMillis(unsigned long milliseconds){
-  unsigned long wakeTime = wdtCounter + (milliseconds * WDT_FREQUENCY);
-  while(wdtCounter < wakeTime);
+	unsigned long wakeTime = wdtCounter + (milliseconds * WDT_FREQUENCY);
+	while(wdtCounter < wakeTime);
 }
 //////////////////////////////////////////////////////////////////////////
 // ConfigWDT
 //////////////////////////////////////////////////////////////////////////
 void ConfigWDT(void)
- {
- //WDTCTL = WDTPW + WDTHOLD;                 // Stop watchdog timer
- WDTCTL = WDTPW + WDTTMSEL + WDTIS0;         // Watchdog timer = SMCLK / 8192
- IE1 |= WDTIE;
- }
+{
+	//WDTCTL = WDTPW + WDTHOLD;					// Stop watchdog timer
+	WDTCTL = WDTPW + WDTTMSEL + WDTIS0;			// Watchdog timer = SMCLK / 8192
+	IE1 |= WDTIE;
+}
 //////////////////////////////////////////////////////////////////////////
 // FaultRoutine
-////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////
 void FaultRoutine(void)
- {
-   //P1OUT = BIT0;                  // P1.0 on (red LED)
-   while(1); 			          // TRAP
- }
+{
+	//P1OUT = BIT0;								// P1.0 on (red LED)
+	while(1);									// TRAP
+}
 //////////////////////////////////////////////////////////////////////////
 // ConfigClocks
 //////////////////////////////////////////////////////////////////////////
 void ConfigClocks(void)
- {
- if (CALBC1_1MHZ ==0xFF || CALDCO_1MHZ == 0xFF)                                       
-   FaultRoutine();		                    // If calibration data is erased
- 				                            // run FaultRoutine()
-  BCSCTL1 = CALBC1_16MHZ; 					// Set range
-  DCOCTL = CALDCO_16MHZ;  					// Set DCO step + modulation 
-  BCSCTL3 |= LFXT1S_2;                      // LFXT1 = VLO
-  IFG1 &= ~OFIFG;                           // Clear OSCFault flag
-  BCSCTL2 |= SELM_0 + DIVM_0 + DIVS_0;      // MCLK = DCO/1, SMCLK = DCO/1	
- }
+{
+	if (CALBC1_1MHZ ==0xFF || CALDCO_1MHZ == 0xFF)
+	FaultRoutine();							// If calibration data is erased
+											// run FaultRoutine()
+	BCSCTL1 = CALBC1_16MHZ;					// Set range
+	DCOCTL = CALDCO_16MHZ;					// Set DCO step + modulation
+	BCSCTL3 |= LFXT1S_2;					// LFXT1 = VLO
+	IFG1 &= ~OFIFG;							// Clear OSCFault flag
+	BCSCTL2 |= SELM_0 + DIVM_0 + DIVS_0;	// MCLK = DCO/1, SMCLK = DCO/1
+}
 //////////////////////////////////////////////////////////////////////////
 // ConfigPorts
-////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////
 void ConfigPorts(void)
- {
-  P1DIR = 0;
-  P2DIR = nok_reset + nok_ce + nok_sdin + nok_sclk;   
-  P2OUT = 0;
- }
+{
+	P1DIR = 0;
+	P2DIR = nok_reset + nok_ce + nok_sdin + nok_sclk;
+	P2OUT = 0;
+}
 //////////////////////////////////////////////////////////////////////////
 // ConfigUART
 //////////////////////////////////////////////////////////////////////////
 void Config_UART()
 {
-	UCA0CTL1 = UCSWRST; // UCSI software reset (OFF STATE)
-    UCA0CTL0 = 0; 
-    UCA0CTL1 |= UCSSEL_3;   // SMCLK is clock for UCSI
-    // 9600 @ 16MHz
-    //UCA0BR0 = 130;	// 1666
-    //UCA0BR1	= 6;
-    //UCA0MCTL = UCBRS1+UCBRS2;  // UCOS16=0; UCBRS=6; UCBRF=0;
-    // 115200 @ 16MHz
-    //UCA0BR0 = 138;	// 138
-    //UCA0BR1	= 0;
-    //UCA0MCTL = UCBRS0+UCBRS1+UCBRS2;  // UCOS16=0; UCBRS=7; UCBRF=0;
-    // 57600 @ 16MHz
-    UCA0BR0 = 17;	// 17
-    UCA0BR1	= 0;
-    UCA0MCTL = UCBRF2 + UCBRF1 + UCOS16;  // UCOS16=1; UCBRS=0; UCBRF=6;
-    
-	P1SEL |= TX + RX;    // config pins
+	UCA0CTL1 = UCSWRST;			// UCSI software reset (OFF STATE)
+	UCA0CTL0 = 0;
+	UCA0CTL1 |= UCSSEL_3;		// SMCLK is clock for UCSI
+#ifdef BAUD_9600
+	// 9600 @ 16MHz
+	UCA0BR0 = 130;
+	UCA0BR1 = 6;
+	UCA0MCTL = UCBRS1+UCBRS2;	// UCOS16=0; UCBRS=6; UCBRF=0;
+#endif
+#ifdef BAUD_57600
+	// 57600 @ 16MHz
+	UCA0BR0 = 17;
+	UCA0BR1 = 0;
+	UCA0MCTL = UCBRF2 + UCBRF1 + UCOS16;	// UCOS16=1; UCBRS=0; UCBRF=6;
+#endif
+#ifdef BAUD_115200
+	// 115200 @ 16MHz
+	UCA0BR0 = 138;
+	UCA0BR1 = 0;
+	UCA0MCTL = UCBRS0+UCBRS1+UCBRS2;		// UCOS16=0; UCBRS=7; UCBRF=0;
+#endif
+
+	P1SEL |= TX + RX;		// config pins
 	P1SEL2 |= TX + RX;
-  	P1DIR |= TX;          // 
-    UCA0CTL1 &= ~UCSWRST; // UCSI software reset (ON STATE)
-//5. Enable interrupts (optional) via UCAxRXIE and/or UCAxTXIE
-	IE2 |= UCA0RXIE; // abilito irq in rx
+	P1DIR |= TX;
+	UCA0CTL1 &= ~UCSWRST;	// UCSI software reset (ON STATE)
+	//5. Enable interrupts (optional) via UCAxRXIE and/or UCAxTXIE
+	IE2 |= UCA0RXIE;	// enable irq in rx
 }
 
 int strncmp(const char *s1, const char *s2, size_t n)
- {
-     unsigned char uc1, uc2;
-     /* Nothing to compare?  Return zero.  */
-     if (n == 0)
-         return 0;
-     /* Loop, comparing bytes.  */
-     while (n-- > 0 && *s1 == *s2) {
-         /* If we've run out of bytes or hit a null, return zero
-            since we already know *s1 == *s2.  */
-         if (n == 0 || *s1 == '\0')
-             return 0;
-         s1++;
-         s2++;
-     }
-     uc1 = (*(unsigned char *) s1);
-     uc2 = (*(unsigned char *) s2);
-     return ((uc1 < uc2) ? -1 : (uc1 > uc2));
- }
+{
+	unsigned char uc1, uc2;
+	/* Nothing to compare?  Return zero. */
+	if (n == 0)
+		return 0;
+	/* Loop, comparing bytes. */
+	while (n-- > 0 && *s1 == *s2) {
+		/* If we've run out of bytes or hit a null, return zero
+		since we already know *s1 == *s2.  */
+		if (n == 0 || *s1 == '\0')
+			return 0;
+		s1++;
+		s2++;
+	}
+	uc1 = (*(unsigned char *) s1);
+	uc2 = (*(unsigned char *) s2);
+	return ((uc1 < uc2) ? -1 : (uc1 > uc2));
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Wait for button press
@@ -210,7 +217,7 @@ unsigned char Serial_available(){
 //////////////////////////////////////////////////////////////////
 char Serial_read(){
 	char byte;
-	
+
 	if(rx_lenght == 0){
 		return (char)-1;
 	}
@@ -229,20 +236,20 @@ char Serial_read(){
 void Serial_print(char string[], unsigned char line_feed){
 	unsigned char i;
 	unsigned char tx_lenght;
-	
+
 	tx_lenght = strlen(string);
 		
 	for(i=0; i < tx_lenght; i++){
 		UCA0TXBUF = string[i];
 		while(UCA0STAT & UCBUSY){}
 	}
-	if (line_feed) 
+	if (line_feed)
 	{
 		UCA0TXBUF = 13;
 		while(UCA0STAT & UCBUSY){}
 		UCA0TXBUF = 10;
 		while(UCA0STAT == UCBUSY){}
-	}	
+	}
 }
 
 /************************************************************************

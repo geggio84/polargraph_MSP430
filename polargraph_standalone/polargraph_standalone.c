@@ -20,9 +20,8 @@
 
 void main( void )
 {
-	//char selection;
 	unsigned long k;
-		
+
 	ConfigWDT();
 	ConfigClocks();
 	ConfigPorts();
@@ -30,40 +29,40 @@ void main( void )
 	Config_UART();
 	// init interrupt
 	_BIS_SR(GIE);
-	
-    nokia_init();
-    nokia_lcd_go(3,0);
-    nokia_write_text("POLARGRAPH SD");
-    nokia_lcd_go(36,1);
-    nokia_write_text("by");
-    nokia_lcd_go(0,2);
-    nokia_write_text("Matteo Geromin");   
-    nokia_lcd_go(9,5);
-    nokia_write_text("Press ENTER"); 
-    
-    SD_mounted=0;
-    contrast = 40;
-    nokia_contrast(contrast);
-    
+
+	nokia_init();
+	nokia_lcd_go(3,0);
+	nokia_write_text("POLARGRAPH SD");
+	nokia_lcd_go(36,1);
+	nokia_write_text("by");
+	nokia_lcd_go(0,2);
+	nokia_write_text("Matteo Geromin");
+	nokia_lcd_go(9,5);
+	nokia_write_text("Press ENTER");
+
+	SD_mounted=0;
+	contrast = 40;
+	nokia_contrast(contrast);
+
 	while(1)
 	{
 		wait_button();
-    	switch (main_menu(SD_mounted)){
-    	case 0:
-    		sd_menu();
-    		break;
-    	case 1:
-    		if(SD_view_menu()) 
-    		{
-    			k = file_menu();
-    			send_commands(k);
-    		}
-    		break;
-    	case 2:
-    		setting_menu();
-    		break;
-    	}
-	}   
+		switch (main_menu(SD_mounted)){
+		case 0:
+			sd_menu();
+			break;
+		case 1:
+			if(SD_view_menu())
+			{
+				k = file_menu();
+				send_commands(k);
+			}
+			break;
+		case 2:
+			setting_menu();
+			break;
+		}
+	}
 }
 
 
@@ -75,13 +74,11 @@ unsigned long file_menu()
 	int res , i;
 	char c[2];
 	WORD s1,w;
-	//unsigned long p1;
 	unsigned long pointer = 0;
-	//unsigned long size = 0;
 	unsigned long command = 0;
-	
+
 	strcat(path,".chk");
-	if(pf_open(path)!= FR_OK) goto open_error;	
+	if(pf_open(path)!= FR_OK) goto open_error;
 	for(i=0; i<4; i++)
 	{
 		pf_read(c, 1, &s1);
@@ -103,28 +100,6 @@ unsigned long file_menu()
 		while(1)
 		{
 			i=0;
-			/*do
-			{
-				res = pf_read(c, 1, &s1);
-				if (res != FR_OK) break;
-				if(s1==0) break;
-				string[i] = c[0];
-				i++;
-				size++;
-				nokia_lcd_go(3,2);
-				switch(size%512)
-				{
-				case 0: nokia_write_text("|||||||||||||");
-					break;
-				case 127: nokia_write_text("/////////////");
-					break;
-				case 255: nokia_write_text("-------------");
-					break;
-				case 383: nokia_write_text("\\\\\\\\\\\\\\\\\\\\\\\\\\");
-					break;
-				}
-			}while(c[0] != 10);
-			*/
 			res = pf_read(string, 30, &s1);
 			if (res != FR_OK) break;
 			if(s1==0) break;
@@ -132,7 +107,7 @@ unsigned long file_menu()
 			string[i] = 0;
 			pointer = pointer + strlen(string);
 			pf_lseek(pointer);
-		
+
 			nokia_lcd_go(3,2);
 			switch(command%128)
 			{
@@ -145,7 +120,7 @@ unsigned long file_menu()
 				case 95: nokia_write_text("\\\\\\\\\\\\\\\\\\\\\\\\\\");
 					break;
 			}
-			
+
 			if((string[0] == 'C')&&(string[i-6]== ',')&&(string[i-5]== 'E')&&(string[i-4]== 'N')&&(string[i-3]== 'D')&&(string[i-2]== 13)) command++;
 			else goto command_error;
 			nokia_lcd_go(12,4);
@@ -156,7 +131,7 @@ unsigned long file_menu()
 		}
 		strcat(path,".chk");
 		if(pf_open(path)!= FR_OK) goto open_error;
-		//pf_lseek(p1);
+
 		for(i=0; i<4; i++)
 		{
 			temp_char[i] = (pointer >> (3-i)*8) & 0xFF;
@@ -181,41 +156,39 @@ unsigned long file_menu()
 	nokia_write_text("Commands");
 	wait_button();
 	path[strlen(path)-4] = 0;
-	if(pf_open(path)!= FR_OK) goto open_error;	
+	if(pf_open(path)!= FR_OK) goto open_error;
 	return command;
-	
+
 open_error:
 	nokia_clear();
 	nokia_lcd_go(6,1);
-    nokia_write_text("Opening file");
-    nokia_lcd_go(21,2);
-    nokia_write_text("ERROR!!");
-    wait_button();
-    return 0;
+	nokia_write_text("Opening file");
+	nokia_lcd_go(21,2);
+	nokia_write_text("ERROR!!");
+	wait_button();
+	return 0;
 command_error:
 	nokia_clear();
 	nokia_lcd_go(6,1);
-    nokia_write_text("Command ");
-    ltoa(command,string);
+	nokia_write_text("Command ");
+	ltoa(command,string);
 	nokia_write_text(string);
-    nokia_lcd_go(21,2);
-    nokia_write_text("ERROR!!");
-    wait_button();
-    return 0;
+	nokia_lcd_go(21,2);
+	nokia_write_text("ERROR!!");
+	wait_button();
+	return 0;
 }
 
 void send_commands(unsigned long nr_commands)
 {
 	int res , i;
-	//char c[2];
 	WORD s1;
 	unsigned long command = 0;
-	//unsigned long temp1 = 0;
 	unsigned long pointer = 0;
 	unsigned long percentual = 0;
 
 	wait_connection();
-	
+
 	nokia_clear();
 	nokia_lcd_go(3,1);
 	nokia_write_text("Set Home");
@@ -266,21 +239,9 @@ go_commands:
 	nokia_lcd_go(12,0);
 	nokia_write_text("Sending...");
 	
-	//_BIC_SR(GIE);
-	//P1IES = left_btn + right_btn;
-	//P1IE = left_btn + right_btn;
-	//_BIS_SR(GIE);
-	
-	//if(pf_open(fno.fname)!= FR_OK) goto open_error;	
-	//if(pf_open(path)!= FR_OK) goto open_error;
-	//temp1 = millis();
-	
 	while(1)
 	{
 		i=0;
-		//command_time2 = millis() - temp1;
-		//temp1 = millis();
-		//if(command != 0) total_time = total_time + command_time2;
 		res = pf_read(string, 30, &s1);
 		if (res != FR_OK) break;
 		if(s1==0) break;
@@ -290,57 +251,35 @@ go_commands:
 		string[i-2] = 0;
 		string[i-1] = 0;
 		pf_lseek(pointer);
-		
+
 		command++;
 		wait_ready();
 resend:
 		Serial_print(string,0);
 		// Wait ACKnowledge
-		if(wait_ack() == 0) goto resend;		
+		if(wait_ack() == 0) goto resend;
 		Serial_print("EXEC",0);
-		//command_time = millis() - temp1;
 		nokia_lcd_go(6,2);
 		ltoa(command,temp_char);
 		nokia_write_text(temp_char);
 		nokia_write_text(" of ");
 		ltoa(nr_commands,temp_char);
 		nokia_write_text(temp_char);
-		//nokia_lcd_go(0,3);
-		//nokia_write_text("              ");
-		//nokia_lcd_go(0,3);
-		//nokia_write_text("LAST1 ");
-		//ltoa(command_time,temp_char);
-		//nokia_write_text(temp_char);
-		//nokia_write_text(" ms");
-		//nokia_lcd_go(0,4);
-		//nokia_write_text("              ");
-		//nokia_lcd_go(0,4);
-		//nokia_write_text("LAST2 ");
-		//ltoa(command_time2,temp_char);
-		//nokia_write_text(temp_char);
-		//nokia_write_text(" ms");
 		nokia_lcd_go(30,4);
 		percentual = ( (command * 100) / nr_commands );
 		ltoa(percentual,temp_char);
 		nokia_write_text(temp_char);
 		nokia_write_text(" %");
-		//nokia_write_text("TOT ");
-		//ltoa(total_time/1000,temp_char);
-		//nokia_write_text(temp_char);
-		//nokia_write_text(" sec");
 		if(((P1IN & left_btn)== 0)||((P1IN & right_btn)== 0))
-		//if(button_press == 1) 
 		{
 			button_press = 0;
 			if(pause() == 0) break;
 		}
 	}
-	//P1IE &= ~left_btn;
-	//P1IE &= ~right_btn;
 	// At the end set pen UP
 resend_pen_up1:
-    Serial_print("C14,END",0);		
-	if(wait_ack() == 0) goto resend_pen_up1;		
+	Serial_print("C14,END",0);
+	if(wait_ack() == 0) goto resend_pen_up1;
 	Serial_print("EXEC",0);
 	nokia_clear();
 	nokia_lcd_go(6,3);
@@ -352,24 +291,24 @@ resend_pen_up1:
 int pause()
 {
 	nokia_lcd_go(0,0);
-    nokia_write_text("----PAUSE----");
-    nokia_lcd_go(0,5);
+	nokia_write_text("----PAUSE----");
+	nokia_lcd_go(0,5);
 	nokia_write_text("end       cont");
-    wait_ready();
+	wait_ready();
 resend_pen_up:
-    Serial_print("C14,END",0);		
-	if(wait_ack() == 0) goto resend_pen_up;		
+	Serial_print("C14,END",0);
+	if(wait_ack() == 0) goto resend_pen_up;
 	Serial_print("EXEC",0);
 	delayMillis(2000);
-    if(wait_button()== left) return 0;
-    nokia_lcd_go(0,0);
-    nokia_write_text("             ");
-    nokia_lcd_go(0,5);
-    nokia_write_text("             ");
-    wait_ready();
+	if(wait_button()== left) return 0;
+	nokia_lcd_go(0,0);
+	nokia_write_text("             ");
+	nokia_lcd_go(0,5);
+	nokia_write_text("             ");
+	wait_ready();
 resend_pen_down:
-    Serial_print("C13,END",0);		
-	if(wait_ack() == 0) goto resend_pen_down;		
+	Serial_print("C13,END",0);
+	if(wait_ack() == 0) goto resend_pen_down;
 	Serial_print("EXEC",0);
 	return 1;
 }
@@ -378,13 +317,13 @@ void wait_connection()
 {
 	nokia_clear();
 	nokia_lcd_go(12,1);
-    nokia_write_text("Waiting...");
-    nokia_lcd_go(3,2);
-    nokia_write_text("Connection...");
-    wait_ready();
+	nokia_write_text("Waiting...");
+	nokia_lcd_go(3,2);
+	nokia_write_text("Connection...");
+	wait_ready();
 	nokia_lcd_go(15,4);
-    nokia_write_text("ESTABLISHED");
-    wait_button();
+	nokia_write_text("ESTABLISHED");
+	wait_button();
 }
 
 // Wait for string "READY"
@@ -392,23 +331,23 @@ void wait_ready()
 {
 	char string2[10];
 	unsigned char i,k;
-	
-while(1)
-{    
-    while(new_line == 0){}
-    while(rx_lenght < 4){}
-    {
-    	k = rx_pointer;
-    	new_line = 0;
-		for(i=0; i<5; i++)
+
+	while(1)
+	{
+		while(new_line == 0){}
+		while(rx_lenght < 4){}
 		{
-			string2[i] = rx_buffer[k];
-			k++;
-			if(k == rx_buffer_lenght) k=0;
+			k = rx_pointer;
+			new_line = 0;
+			for(i=0; i<5; i++)
+			{
+				string2[i] = rx_buffer[k];
+				k++;
+				if(k == rx_buffer_lenght) k=0;
+			}
+			if(strncmp(string2,"READY",5) == 0) return;
 		}
-		if(strncmp(string2,"READY",5) == 0) return;
-    }
-}
+	}
 }
 
 // Wait for string "ACK,"
@@ -417,25 +356,25 @@ unsigned char wait_ack()
 	char string2[10];
 	int j=3;
 	unsigned char i,k;
-	
-while(j != 0)
-{    
-    while(new_line == 0){}
-    while(rx_lenght < 3){}
-    {
-    	j--;
-    	k = rx_pointer;
-    	new_line = 0;
-		for(i=0; i<4; i++)
+
+	while(j != 0)
+	{
+		while(new_line == 0){}
+		while(rx_lenght < 3){}
 		{
-			string2[i] = rx_buffer[k];
-			k++;
-			if(k == rx_buffer_lenght) k=0;
+			j--;
+			k = rx_pointer;
+			new_line = 0;
+			for(i=0; i<4; i++)
+			{
+				string2[i] = rx_buffer[k];
+				k++;
+				if(k == rx_buffer_lenght) k=0;
+			}
+			if(strncmp(string2,"ACK,",4) == 0) return 1;
 		}
-		if(strncmp(string2,"ACK,",4) == 0) return 1;
-    }
-}
-return 0;
+	}
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -445,44 +384,44 @@ char main_menu(char mounted)
 {
 	nokia_clear();
 	nokia_lcd_go(18,0);
-    nokia_write_text("> MENU <");
-    nokia_lcd_go(0,1);
-    nokia_write_text("==============");
-    nokia_lcd_go(0,5);
-    nokia_write_text("change   enter");
+	nokia_write_text("> MENU <");
+	nokia_lcd_go(0,1);
+	nokia_write_text("==============");
+	nokia_lcd_go(0,5);
+	nokia_write_text("change   enter");
 init_main_menu:
-    nokia_lcd_go(0,2);
-    nokia_write_text("=> Mount SD");
-    if(mounted) nokia_write_text(" OK");
-    nokia_lcd_go(0,3);
-    nokia_write_text("   SD view");
-    nokia_lcd_go(0,4);
-    nokia_write_text("   Settings");
-    if(wait_button() == left)
-    {
-    	nokia_lcd_go(0,2);
-    	nokia_write_text("   Mount SD");
-    	if(mounted) nokia_write_text(" OK");
-    	nokia_lcd_go(0,3);
-    	nokia_write_text("=> SD view");
-    	nokia_lcd_go(0,4);
-    	nokia_write_text("   Settings");
-    	if(wait_button() == left)
-    	{	
-    		nokia_lcd_go(0,2);
-    		nokia_write_text("   Mount SD");
-    		if(mounted) nokia_write_text(" OK");
-    		nokia_lcd_go(0,3);
-    		nokia_write_text("   SD view");
-    		nokia_lcd_go(0,4);
-    		nokia_write_text("=> Settings");
-    		if(wait_button() == left)
-    			goto init_main_menu;
-    		else return 2;
-    	}
-    	else return 1;
-    }
-    else return 0;
+	nokia_lcd_go(0,2);
+	nokia_write_text("=> Mount SD");
+	if(mounted) nokia_write_text(" OK");
+	nokia_lcd_go(0,3);
+	nokia_write_text("   SD view");
+	nokia_lcd_go(0,4);
+	nokia_write_text("   Settings");
+	if(wait_button() == left)
+	{
+		nokia_lcd_go(0,2);
+		nokia_write_text("   Mount SD");
+		if(mounted) nokia_write_text(" OK");
+		nokia_lcd_go(0,3);
+		nokia_write_text("=> SD view");
+		nokia_lcd_go(0,4);
+		nokia_write_text("   Settings");
+		if(wait_button() == left)
+		{
+			nokia_lcd_go(0,2);
+			nokia_write_text("   Mount SD");
+			if(mounted) nokia_write_text(" OK");
+			nokia_lcd_go(0,3);
+			nokia_write_text("   SD view");
+			nokia_lcd_go(0,4);
+			nokia_write_text("=> Settings");
+			if(wait_button() == left)
+				goto init_main_menu;
+			else return 2;
+		}
+		else return 1;
+	}
+	else return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -517,7 +456,7 @@ void setting_menu(void)
 				contrast = 100;
 				dir = 0;
 			}
-			else if(contrast < 35) 
+			else if(contrast < 35)
 			{
 				contrast = 40;
 				dir = 1;
@@ -571,14 +510,14 @@ char SD_view_menu(void)
 	{
 		path[i] = 0;
 	}
-	
+
 	if(SD_mounted == 0) sd_menu();
 	nokia_clear();
 	nokia_lcd_go(6,0);
 	nokia_write_text("> SD VIEW <");
 	nokia_lcd_go(0,5);
 	nokia_write_text("change   enter");
-	
+
 		if(view_tree(""))
 		{
 			while(1)
@@ -624,7 +563,7 @@ char view_tree(char *path)
 {
 	int res;
 	unsigned char lenght;
-	
+
 while(1)
 {
 	pf_opendir(&dir, path);
@@ -668,7 +607,6 @@ while(1)
 	nokia_lcd_go(0,3);
 	nokia_write_text(fno.fname);
 	wait_button();
-	//printf("%u item(s)\n", s1);
 	return 0;
 }
 
@@ -685,8 +623,8 @@ __interrupt void port_irq (void)
 __interrupt void UART_RX (void)
 {
 	char i = UCA0RXBUF;
- 	rx_buffer[rx_index] = i;
- 	if(i == 10) new_line = 1;
+	rx_buffer[rx_index] = i;
+	if(i == 10) new_line = 1;
 	rx_index++;
 	rx_lenght++;
 	if(rx_index == rx_buffer_lenght) rx_index = 0;
@@ -697,10 +635,10 @@ __interrupt void UART_RX (void)
 		if(rx_index == 0) rx_pointer = rx_buffer_lenght - 1;
 		else rx_pointer = rx_index - 1;
 	}
-	last_rx_char = i;	
-}     // end interrupt
+	last_rx_char = i;
+} // end interrupt
 
 #pragma vector=WDT_VECTOR
 __interrupt void watchdog_timer(void){
-  wdtCounter++;
+	wdtCounter++;
 }
