@@ -87,7 +87,7 @@ unsigned char isPenUp = true;
 
 // Stepper caracteristics
 int motorStepsPerRev = 768; //1536;//
-float mmPerRev = 71;
+float mmPerRev = 65;
 float mmPerStep;
 float stepsPerMM;
 // type of stepper movements
@@ -136,7 +136,7 @@ const char INTERMINATOR = 10;
 int availMem = 0;
 
 // line width in mm
-static float penWidth = 0.8; 
+static float penWidth = 0.4;
 
 // FLAGS
 unsigned char reportingPosition = true;
