@@ -938,7 +938,7 @@ char* readCommand(char* inString)
   while (Serial_available() > 0)
   {
     char ch = Serial_read();       // get it
-    delayMillis(15);
+    delayMillis(3);
     inString[inCount] = ch;
     if (ch == INTERMINATOR)
     {

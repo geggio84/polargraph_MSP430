@@ -34,7 +34,7 @@ void loop()
     {
 	//rove();
       timeSince = millis() - idleTime;
-      if (timeSince > 5000)
+      if (timeSince > 1000)
       {
         ready();
         idleTime = millis();
