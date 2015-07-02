@@ -210,8 +210,9 @@ void send_commands(unsigned long nr_commands)
 	//char c[2];
 	WORD s1;
 	unsigned long command = 0;
-	unsigned long temp1 = 0;
+	//unsigned long temp1 = 0;
 	unsigned long pointer = 0;
+	unsigned long percentual = 0;
 
 	wait_connection();
 	
@@ -272,24 +273,14 @@ go_commands:
 	
 	//if(pf_open(fno.fname)!= FR_OK) goto open_error;	
 	//if(pf_open(path)!= FR_OK) goto open_error;
-	temp1 = millis();
+	//temp1 = millis();
 	
 	while(1)
 	{
-		//for(k=0; k<30;k++) string[k] = 0;
 		i=0;
-		wait_ready();
-		command_time2 = millis() - temp1;
-		temp1 = millis();
-		if(command != 0) total_time = total_time + command_time2;
-		//do
-		//{
-		//	res = pf_read(string, 30, &s1);
-		//	if (res != FR_OK) break;
-		//	if(s1==0) break;
-		//	string[i] = c[0];
-		//	i++;
-		//}while(c[0] != 10);
+		//command_time2 = millis() - temp1;
+		//temp1 = millis();
+		//if(command != 0) total_time = total_time + command_time2;
 		res = pf_read(string, 30, &s1);
 		if (res != FR_OK) break;
 		if(s1==0) break;
@@ -301,8 +292,10 @@ go_commands:
 		pf_lseek(pointer);
 		
 		command++;
+		wait_ready();
 resend:
-		Serial_print(string,0);		
+		Serial_print(string,0);
+		// Wait ACKnowledge
 		if(wait_ack() == 0) goto resend;		
 		Serial_print("EXEC",0);
 		//command_time = millis() - temp1;
@@ -326,10 +319,15 @@ resend:
 		//ltoa(command_time2,temp_char);
 		//nokia_write_text(temp_char);
 		//nokia_write_text(" ms");
-		nokia_lcd_go(0,4);
-		nokia_write_text("TOT ");
-		ltoa(total_time/1000,temp_char);
+		nokia_lcd_go(30,4);
+		percentual = ( (command * 100) / nr_commands );
+		ltoa(percentual,temp_char);
 		nokia_write_text(temp_char);
+		nokia_write_text(" %");
+		//nokia_write_text("TOT ");
+		//ltoa(total_time/1000,temp_char);
+		//nokia_write_text(temp_char);
+		//nokia_write_text(" sec");
 		if(((P1IN & left_btn)== 0)||((P1IN & right_btn)== 0))
 		//if(button_press == 1) 
 		{
