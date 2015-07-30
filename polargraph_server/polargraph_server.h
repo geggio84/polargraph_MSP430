@@ -8,6 +8,8 @@
 #define MCLK_FREQUENCY		16000000
 #define WDT_DIVIDER			8192
 
+#define PI					3.1415
+
 #define WDT_FREQUENCY		(MCLK_FREQUENCY / WDT_DIVIDER) / 1000
 volatile unsigned long wdtCounter = 0;
 
@@ -214,6 +216,24 @@ unsigned char lastCommandConfirmed = false;
 #define CMD_SETMACHINESTEPSPERREV		"C30"
 #define CMD_SETMOTORSPEED				"C31"
 #define CMD_SETMOTORACCEL				"C32"
+// NEW COMMANDS not yet implemented
+#define CMD_SETPENLIFTRANGE				"C45"
+#define CMD_SETMACHINESTEPMULTIPLIER	"C37"
+#define CMD_DRAWSAWPIXEL				"C15"
+#define CMD_DRAWCIRCLEPIXEL				"C16"
+#define CMD_SET_ROVE_AREA				"C21"
+#define CMD_MODE_STORE_COMMANDS			"C33"
+#define CMD_MODE_EXEC_FROM_STORE		"C34"
+#define CMD_MODE_LIVE					"C35"
+#define CMD_RANDOM_DRAW					"C36"
+#define CMD_START_TEXT					"C38"
+#define CMD_DRAW_SPRITE					"C39"
+#define CMD_CHANGELENGTH_RELATIVE		"C40"
+#define CMD_SWIRLING					"C41"
+#define CMD_DRAW_RANDOM_SPRITE			"C42"
+#define CMD_DRAW_NORWEGIAN				"C43"
+#define CMD_DRAW_NORWEGIAN_OUTLINE		"C44"
+
 #define CMD_END							",END"
 
 ///////////////////////////////////////////////////////////////////////
@@ -2464,90 +2484,79 @@ void outputAvailableMemory()
 		PRINT(CMD_END , 1)
 	}
 }
-/*
-//float rads(int n) {
-//  // Return an angle in radians
-//  return (n/180.0 * PI);
-//}    
-//
-//void drawCurve(float x, float y, float fx, float fy, float cx, float cy) {
-//  // Draw a Quadratic Bezier curve from (x, y) to (fx, fy) using control pt
-//  // (cx, cy)
-//  float xt=0;
-//  float yt=0;
-//
-//  for (float t=0; t<=1; t+=.0025) {
-//    xt = pow((1-t),2) *x + 2*t*(1-t)*cx+ pow(t,2)*fx;
-//    yt = pow((1-t),2) *y + 2*t*(1-t)*cy+ pow(t,2)*fy;
-//    changeLength(xt, yt);
-//  }  
-//}
-//                                                     
-//
-//void drawCircle(int centerx, int centery, int radius) {
-//  // Estimate a circle using 20 arc Bezier curve segments
-//  int segments =20;
-//  int angle1 = 0;
-//  int midpoint=0;
-//   
-//   changeLength(centerx+radius, centery);
-//
-//  for (float angle2=360/segments; angle2<=360; angle2+=360/segments) {
-//
-//    midpoint = angle1+(angle2-angle1)/2;
-//
-//    float startx=centerx+radius*cos(rads(angle1));
-//    float starty=centery+radius*sin(rads(angle1));
-//    float endx=centerx+radius*cos(rads(angle2));
-//    float endy=centery+radius*sin(rads(angle2));
-//    
-//    int t1 = rads(angle1)*1000 ;
-//    int t2 = rads(angle2)*1000;
-//    int t3 = angle1;
-//    int t4 = angle2;
-//
-//    drawCurve(startx,starty,endx,endy,
-//              centerx+2*(radius*cos(rads(midpoint))-.25*(radius*cos(rads(angle1)))-.25*(radius*cos(rads(angle2)))),
-//              centery+2*(radius*sin(rads(midpoint))-.25*(radius*sin(rads(angle1)))-.25*(radius*sin(rads(angle2))))
-//    );
-//    
-//    angle1=angle2;
-//  }
-//
-//}
-//
-//
-//              
-//void drawCircles(int number, int centerx, int centery, int r) {
-//   // Draw a certain number of concentric circles at the given center with
-//   // radius r
-//   int dr=0;
-//   if (number > 0) {
-//     dr = r/number;
-//     for (int k=0; k<number; k++) {
-//       drawCircle(centerx, centery, r);
-//       r=r-dr;
-//     }
-//   }
-//}
-//long getCartesianX(float aPos, float bPos)
-//{
-//  long calcX = long((pow(pageWidth, 2) - pow(bPos, 2) + pow(aPos, 2)) / (pageWidth*2));
-//  return calcX;  
-//}
-//
-//long getCartesianX() {
-//  long calcX = getCartesianX(accelA.currentPosition(), accelB.currentPosition());
-//  return calcX;  
-//}
-//
-//long getCartesianY() {
-//  return getCartesianY(getCartesianX(), accelA.currentPosition());
-//}
-//long getCartesianY(long cX, float aPos) {
-//  long calcY = long(sqrt(pow(aPos,2)-pow(cX,2)));
-//  return calcY;
-//}*/
 
+float rads(int n) {
+	// Return an angle in radians
+	return (n/180.0 * PI);
+}
+
+void drawCurve(float x, float y, float fx, float fy, float cx, float cy) {
+	// Draw a Quadratic Bezier curve from (x, y) to (fx, fy) using control pt
+	// (cx, cy)
+	float xt=0;
+	float yt=0;
+	float t;
+
+	for (t=0; t<=1; t+=.0025) {
+		xt = pow((1-t),2) *x + 2*t*(1-t)*cx+ pow(t,2)*fx;
+		yt = pow((1-t),2) *y + 2*t*(1-t)*cy+ pow(t,2)*fy;
+		changeLength_float(xt, yt);
+	}
+}
+
+void drawCircle(int centerx, int centery, int radius) {
+	// Estimate a circle using 20 arc Bezier curve segments
+	int segments = 20;
+	int angle1 = 0;
+	int midpoint = 0;
+	float angle2;
+
+	changeLength_long(centerx+radius, centery);
+
+	for (angle2=360/segments; angle2<=360; angle2+=360/segments) {
+
+		midpoint = angle1+(angle2-angle1)/2;
+
+		float startx=centerx+radius*cos(rads(angle1));
+		float starty=centery+radius*sin(rads(angle1));
+		float endx=centerx+radius*cos(rads(angle2));
+		float endy=centery+radius*sin(rads(angle2));
+		int t1 = rads(angle1)*1000 ;
+		int t2 = rads(angle2)*1000;
+		//int t3 = angle1;
+		//int t4 = angle2;
+
+		drawCurve(startx,starty,endx,endy,
+			centerx+2*(radius*cos(rads(midpoint))-.25*(radius*cos(rads(angle1)))-.25*(radius*cos(rads(angle2)))),
+			centery+2*(radius*sin(rads(midpoint))-.25*(radius*sin(rads(angle1)))-.25*(radius*sin(rads(angle2))))
+		);
+
+		angle1=angle2;
+	}
+
+}
+
+void drawCircles(int number, int centerx, int centery, int r) {
+	// Draw a certain number of concentric circles at the given center with
+	// radius r
+	int dr=0;
+	int k;
+	if (number > 0) {
+		dr = r/number;
+		for (k=0; k<number; k++) {
+			drawCircle(centerx, centery, r);
+			r=r-dr;
+		}
+	}
+}
+
+long getCartesianX() {
+	long calcX = getCartesianXFP(currentPosition(SX), currentPosition(DX));
+	return calcX;
+}
+
+long getCartesianY() {
+	return getCartesianYFP(getCartesianX(), currentPosition(SX));
+}
 
 #endif /*POLARGRAPH_SERVER_H_*/
