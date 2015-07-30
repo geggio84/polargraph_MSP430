@@ -77,9 +77,9 @@ unsigned char polargraph_standalone = 1;
 
 // Pen raising servo
 //Servo penHeight;
-unsigned char const UP_POSITION = 40;
-unsigned char const DOWN_POSITION = 0;
-unsigned char const PEN_HEIGHT_SERVO_PIN = 10;
+unsigned char const SERVO_TIME = 30;
+#define PEN_UP 1000
+#define PEN_DOWN 1700
 unsigned char isPenUp = true;
 
 // Stepper caracteristics
@@ -715,9 +715,9 @@ void delay_us(unsigned int us)
 void movePenUp()
 {
 	int i;
-	for (i=DOWN_POSITION; i<UP_POSITION; i++) {
+	for (i=0; i<SERVO_TIME; i++) {
 		P1OUT |= servo_pin;
-		delay_us(925);
+		delay_us(PEN_UP);
 		P1OUT &= ~servo_pin;
 		delayMillis(17);
 	}
@@ -740,12 +740,14 @@ void penUp()
 void movePenDown()
 {
 	int i;
+	int pulse_time = PEN_UP;
 
-	for (i=UP_POSITION; i>DOWN_POSITION; i--) {
+	for (i=0; i<SERVO_TIME; i++) {
 		P1OUT |= servo_pin;
-		delay_us(1700);
+		delay_us(pulse_time);
 		P1OUT &= ~servo_pin;
-		delayMillis(15);
+		pulse_time = pulse_time + ((PEN_DOWN-PEN_UP)/SERVO_TIME);
+		delayMillis(17);
 	}
 
 	isPenUp = false;
@@ -771,20 +773,6 @@ void testPenHeight()
 	penDown();
 	delayMillis(3000);
 }
-//////////////////////////////////////////////////////////////////
-// Test Servo Range												//
-//////////////////////////////////////////////////////////////////
-/*void testServoRange()
-{
-	int i;
-  //penHeight.attach(PEN_HEIGHT_SERVO_PIN);
-  for (i=0; i<200; i++) {
-    //Serial_println(i);
-    //penHeight.write(i);
-    delayMillis(15);
-  }
-  //penHeight.detach();
-}*/
 
 void readSwitches() {
 	// get the current switch state
