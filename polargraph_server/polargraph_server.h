@@ -1034,6 +1034,42 @@ void executeCommand(char inS[])
 	{
 	changeLengthDirect();
 	}
+	else if (strncmp(inS,CMD_DRAWPIXEL,3)==0)
+	{
+	// go to coordinates.
+	drawSquarePixel_command();
+	}
+	else if (strncmp(inS,CMD_DRAWSCRIBBLEPIXEL,3)==0)
+	{
+	// go to coordinates.
+	drawScribblePixel_from_command();
+	}
+	else if (strncmp(inS,CMD_DRAWRECT,3)==0)
+	{
+	// go to coordinates.
+	drawRectangle();
+	}
+	else if (strncmp(inS,CMD_CHANGEDRAWINGDIRECTION,3)==0)
+	{
+	changeDrawingDirection();
+	}
+	else if (strncmp(inS,CMD_PENDOWN,3)==0)
+	{
+	penDown();
+	}
+	else if (strncmp(inS,CMD_PENUP,3)==0)
+	{
+	penUp();
+	}
+	else if (strncmp(inS,CMD_SETPOSITION,3)==0)
+	{
+	setPosition();
+	}
+	else if (strncmp(inS,CMD_AUTOSETPOSITION,3)==0)
+	{
+	homeRoutine();
+	setPosition();
+	}
 	else if (strncmp(inS,CMD_CHANGEPENWIDTH,3)==0)
 	{
 	changePenWidth();
@@ -1054,34 +1090,6 @@ void executeCommand(char inS[])
 	{
 	setMotorAcceleration_from_parameter();
 	}
-	else if (strncmp(inS,CMD_DRAWPIXEL,3)==0)
-	{
-	// go to coordinates.
-	drawSquarePixel_command();
-	}
-	else if (strncmp(inS,CMD_DRAWSCRIBBLEPIXEL,3)==0)
-	{
-	// go to coordinates.
-	drawScribblePixel_from_command();
-	}
-	else if (strncmp(inS,CMD_DRAWRECT,3)==0)
-	{
-	// go to coordinates.
-	drawRectangle();
-	}
-	else if (strncmp(inS,CMD_CHANGEDRAWINGDIRECTION,3)==0)
-	{
-	changeDrawingDirection();
-	}
-	else if (strncmp(inS,CMD_SETPOSITION,3)==0)
-	{
-	setPosition();
-	}
-	else if (strncmp(inS,CMD_AUTOSETPOSITION,3)==0)
-	{
-	homeRoutine();
-	setPosition();
-	}
 	else if (strncmp(inS,CMD_TESTPATTERN,3)==0)
 	{
 	testPattern();
@@ -1093,14 +1101,6 @@ void executeCommand(char inS[])
 	else if (strncmp(inS,CMD_TESTPENWIDTHSCRIBBLE,3)==0)
 	{
 	testPenWidthScribble();
-	}
-	else if (strncmp(inS,CMD_PENDOWN,3)==0)
-	{
-	penDown();
-	}
-	else if (strncmp(inS,CMD_PENUP,3)==0)
-	{
-	penUp();
 	}
 	else if (strncmp(inS,CMD_SETMACHINESIZE,3)==0)
 	{
@@ -1938,7 +1938,7 @@ void drawScribblePixel_from_command()
 	density = scaleDensity(density, 255, maxDens);
 	drawScribblePixel(originA, originB, size*1.1, density);
 
-	outputAvailableMemory(); 
+	outputAvailableMemory();
 }
 //////////////////////////////////////////////////////////////////
 // Draw Scribble Pixel											//
