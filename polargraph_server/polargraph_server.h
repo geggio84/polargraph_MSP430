@@ -1865,12 +1865,15 @@ void drawSquarePixel_command()
 		endPointB = originB - halfSize;
 	}
 
-	density = scaleDensity(density, 255, maxDensity(penWidth, size));
-
-	changeLength_long(startPointA, startPointB);
-	if (density > 1)
+	if (isPenUp == false)
 	{
-		drawSquarePixel(size, size, density, globalDrawDirection);
+		density = scaleDensity(density, 255, maxDensity(penWidth, size));
+
+		changeLength_long(startPointA, startPointB);
+		if (density > 1)
+		{
+			drawSquarePixel(size, size, density, globalDrawDirection);
+		}
 	}
 	changeLength_long(endPointA, endPointB);
 
