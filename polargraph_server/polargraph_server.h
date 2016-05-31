@@ -880,6 +880,9 @@ void homeRoutine(){
 
 	setSpeed(500,SX);	//motors can use normal speed
 	setSpeed(-500,DX);
+	
+	// pen up
+	penUp();
 
 	do {
 		while(runSpeed(SX)==false);
