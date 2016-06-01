@@ -72,7 +72,7 @@ void main( void )
 unsigned long file_menu()
 {
 	int res , i;
-	char c[2];
+	unsigned char c[4];
 	WORD s1,w;
 	unsigned long pointer = 0;
 	unsigned long command = 0;
@@ -82,12 +82,12 @@ unsigned long file_menu()
 	for(i=0; i<4; i++)
 	{
 		pf_read(c, 1, &s1);
-		pointer = pointer + (c[0] << (3-i)*8);
+		pointer = pointer + ( ((unsigned long)c[0] & 0xFF) << (3-i)*8);
 	}
 	for(i=0; i<4; i++)
 	{
 		pf_read(c, 1, &s1);
-		command = command + (c[0] << (3-i)*8);
+		command = command + ( ((unsigned long)c[0] & 0xFF) << (3-i)*8);
 	}
 
 	if((pointer == 0) && (command == 0))
