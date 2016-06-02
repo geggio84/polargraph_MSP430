@@ -802,7 +802,8 @@ void readSwitches() {
 
 void homeRoutine(){
 	int i;
-	penDown();
+	
+	penUp();
 	// find the current robot position and 
 	// reel in the left motor until contact is made.
 	//let out gondola to avoid being at home position
@@ -878,9 +879,6 @@ void homeRoutine(){
 
 	setSpeed(500,SX);	//motors can use normal speed
 	setSpeed(-500,DX);
-	
-	// pen up
-	penUp();
 
 	do {
 		while(runSpeed(SX)==false);
