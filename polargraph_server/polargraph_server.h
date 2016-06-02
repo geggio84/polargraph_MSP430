@@ -820,7 +820,6 @@ void homeRoutine(){
 	do {
 		//move left motor back and right motor forward to find left hime location
 		while(runSpeed(SX)==false);
-		step(1,SX);
 
 		readSwitches();
 	} while (switch1 != 0);
@@ -834,7 +833,6 @@ void homeRoutine(){
 	do {
 		//move right  motor back and left motor released to find right home location
 		while(runSpeed(DX)==false);
-		step(1,DX);
 
 		readSwitches();
 	} while (switch2 != 0);
@@ -874,7 +872,7 @@ void homeRoutine(){
 	lengthHome = (sqrt((machineWd*machineWd)-(yHome*yHome))) - gondolaOffset; //in mm and allow for gondola offset
 
 	//convert to steps
-	lengthHomeSteps=lengthHome*stepsPerMM*2; //not sure why but need to correct steps/mm by factor of 2
+	lengthHomeSteps=lengthHome*stepsPerMM; //not sure why but need to correct steps/mm by factor of 2
 	//calc # of steps for left motor to retract
 	leftStepsRetract = laststep1 - lengthHomeSteps + rightExtend;
 
