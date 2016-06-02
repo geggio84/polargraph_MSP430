@@ -85,7 +85,7 @@ unsigned char const SERVO_TIME = 30;
 unsigned char isPenUp = true;
 
 // Stepper caracteristics
-int motorStepsPerRev = 768;
+int motorStepsPerRev = 1536;
 float mmPerRev = 65;
 float mmPerStep;
 float stepsPerMM;
@@ -110,7 +110,7 @@ int maxLength = 0;
 #define DEFAULT_MACHINE_WIDTH 		722
 #define DEFAULT_MACHINE_HEIGHT		1000
 #define DEFAULT_MM_PER_REV			65
-#define DEFAULT_STEPS_PER_REV		768
+#define DEFAULT_STEPS_PER_REV		1536
 
 // Machine Name
 #define machine_name_lenght 5
