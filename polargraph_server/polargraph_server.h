@@ -74,8 +74,11 @@ int const rightExtend = 750; //number of steps to extend right motor during home
 long laststep1, laststep2, stepsNeeded;
 
 // print define
-unsigned char polargraph_standalone = 1;
-#define PRINT(text,lf) if(!polargraph_standalone) Serial_print(text , lf);
+#define POLARGRAPH_STANDALONE
+#define PRINT(text,lf) 
+	#ifndef POLARGRAPH_STANDALONE
+		Serial_print(text , lf);
+	#endif
 
 // Pen raising servo
 //Servo penHeight;
@@ -987,15 +990,12 @@ void drawing()
 //////////////////////////////////////////////////////////////////
 void acknowledge(char command[])
 {
-	if(polargraph_standalone)
-	{
+#ifdef POLARGRAPH_STANDALONE
 		Serial_print(CMD_ACK , 1);
-	}
-	else
-	{
+#else
 		Serial_print(CMD_ACK , 0);
 		Serial_print(command , 1);
-	}
+#endif
 }
 //////////////////////////////////////////////////////////////////
 // Extract substring from string from start to end				//
@@ -1381,10 +1381,14 @@ void changeDrawingDirection()
 	globalDrawDirectionMode = asInt(inParam1);
 	globalDrawDirection = asInt(inParam2);
 	PRINT("Changed draw direction mode to be " , 0)
-	if(!polargraph_standalone) itoa(globalDrawDirectionMode, temp_char, 10);
+#ifndef POLARGRAPH_STANDALONE
+	itoa(globalDrawDirectionMode, temp_char, 10);
+#endif
 	PRINT(temp_char , 0)
 	PRINT(" and direction is " , 0)
-	if(!polargraph_standalone) itoa(globalDrawDirection, temp_char, 10);
+#ifndef POLARGRAPH_STANDALONE
+	itoa(globalDrawDirection, temp_char, 10);
+#endif
 	PRINT(temp_char , 1)
 }
 //////////////////////////////////////////////////////////////////
@@ -1601,7 +1605,7 @@ void changeLength_long(long tA, long tB)
 		run(SX);
 		run(DX);
 	}
-	if(!polargraph_standalone) reportPosition();
+	reportPosition();
 }
 //////////////////////////////////////////////////////////////////
 // Change lenght floating point									//
@@ -1616,7 +1620,7 @@ void changeLength_float(float tA, float tB)
 		run(SX);
 		run(DX);
 	}
-	if(!polargraph_standalone) reportPosition();
+	reportPosition();
 }
 
 //void changeLengthRelative(long tA, long tB)
@@ -2022,7 +2026,9 @@ int maxDensity(float penSize, int rowSize)
 {
 	float rowSizeInMM = mmPerStep * rowSize;
 	PRINT("rowsize in mm: " , 0)
-	if(!polargraph_standalone) ltoa(rowSizeInMM,temp_char);
+#ifndef POLARGRAPH_STANDALONE
+	ltoa(rowSizeInMM,temp_char);
+#endif
 	PRINT(temp_char , 1)
 
 	float numberOfSegments = rowSizeInMM / penSize;
@@ -2031,7 +2037,9 @@ int maxDensity(float penSize, int rowSize)
 		maxDens = (int)numberOfSegments;
 
 	PRINT("Max density: ",0)
-	if(!polargraph_standalone) itoa(maxDens,temp_char,10);
+#ifndef POLARGRAPH_STANDALONE
+	itoa(maxDens,temp_char,10);
+#endif
 	PRINT(temp_char, 1)
 
 	return maxDens;
@@ -2097,7 +2105,7 @@ void drawSquarePixel(int length, int width, int density, unsigned char drawDirec
 				drawSquareWaveAlongB(width, segmentLength, density, i);
 			}
 			lengthSoFar += segmentLength;
-			if(!polargraph_standalone) reportPosition();
+			reportPosition();
 		} // end of loop
 	}
 }
@@ -2380,21 +2388,23 @@ long currentPosition(unsigned char side)
 //////////////////////////////////////////////////////////////////
 void reportPosition()
 {
+#ifndef POLARGRAPH_STANDALONE
 	long pos_sx, pos_dx;
 	if (reportingPosition)
 	{
 		PRINT(OUT_CMD_SYNC , 0)
 		pos_sx = currentPosition(SX);
-		if(!polargraph_standalone) ltoa(pos_sx,temp_char);
+		ltoa(pos_sx,temp_char);
 		PRINT(temp_char , 0)
 		PRINT(COMMA , 0)
 		pos_dx = currentPosition(DX);
-		if(!polargraph_standalone) ltoa(pos_dx,temp_char);
+		ltoa(pos_dx,temp_char);
 		PRINT(temp_char , 0)
 		PRINT(CMD_END , 1)
 
 		outputAvailableMemory();
 	}
+#endif
 }
 //////////////////////////////////////////////////////////////////
 // Set position													//
@@ -2476,15 +2486,17 @@ int availableMemory()
 //////////////////////////////////////////////////////////////////
 void outputAvailableMemory()
 {
+#ifndef POLARGRAPH_STANDALONE
 	long avMem = availableMemory();
 	if (avMem != availMem)
 	{
 		availMem = avMem;
 		PRINT(FREE_MEMORY_STRING , 0)
-		if(!polargraph_standalone) itoa(availMem,temp_char,10);
+		itoa(availMem,temp_char,10);
 		PRINT(temp_char , 0)
 		PRINT(CMD_END , 1)
 	}
+#endif
 }
 
 float rads(int n) {
