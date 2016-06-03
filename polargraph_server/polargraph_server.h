@@ -691,23 +691,6 @@ void EEPROM_write(int p_address, unsigned char lowByte)
 	FCTL1 = FWKEY;							// Clear WRT bit
 	FCTL3 = FWKEY + LOCKA + LOCK;			// Set LOCK & LOCKA bit
 }
-
-//void motora_onestep(unsigned char direction, int stepType){}
-//void motorb_onestep(unsigned char direction, int stepType){}
-//void forwarda() {
-//  motora_onestep(FORWARD, stepType);
-//}
-//void backwarda() {
-//  motora_onestep(BACKWARD, stepType);
-//}
-//
-//void forwardb() {
-//  motorb_onestep(FORWARD, stepType);
-//}
-//void backwardb() {
-//  motorb_onestep(BACKWARD, stepType);
-//}
-
 //////////////////////////////////////////////////////////////////
 // Delay ms milliseconds										//
 //////////////////////////////////////////////////////////////////
@@ -1878,13 +1861,6 @@ void drawSquarePixel_command()
 	changeLength_long(endPointA, endPointB);
 
 	outputAvailableMemory(); 
-}
-//////////////////////////////////////////////////////////////////
-// Random Draw Direction										//
-//////////////////////////////////////////////////////////////////
-unsigned char getRandomDrawDirection()
-{
-	return random(1, 5);
 }
 //////////////////////////////////////////////////////////////////
 // Get Draw Direction											//
