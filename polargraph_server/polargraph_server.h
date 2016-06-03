@@ -720,6 +720,7 @@ void delay_us(unsigned int us)
 //////////////////////////////////////////////////////////////////
 // Move pen Up													//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_PENUP
 void movePenUp()
 {
 	int i;
@@ -742,9 +743,11 @@ void penUp()
 		movePenUp();
 	}
 }
+#endif /* CMD_PENUP */
 //////////////////////////////////////////////////////////////////
 // Move Pen down												//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_PENDOWN
 void movePenDown()
 {
 	int i;
@@ -770,6 +773,7 @@ void penDown()
 		movePenDown();
 	}
 }
+#endif /* CMD_PENDOWN */
 //////////////////////////////////////////////////////////////////
 // Test Pen Height												//
 //////////////////////////////////////////////////////////////////
@@ -1034,37 +1038,38 @@ void executeCommand(char inS[])
 	{
 	changeLength();
 	}
+#ifdef CMD_CHANGELENGTHDIRECT
 	else if (strncmp(inS,CMD_CHANGELENGTHDIRECT,3)==0)
-	{
-	changeLengthDirect();
-	}
+		changeLengthDirect();
+#endif /* CMD_CHANGELENGTHDIRECT */
+#ifdef CMD_DRAWPIXEL
 	else if (strncmp(inS,CMD_DRAWPIXEL,3)==0)
-	{
-	// go to coordinates.
-	drawSquarePixel_command();
-	}
+		drawSquarePixel_command();
+#endif /* CMD_DRAWPIXEL */
+#ifdef CMD_DRAWCIRCLEPIXEL
+	else if (strncmp(inS,CMD_DRAWCIRCLEPIXEL,3)==0)
+    	curves_pixel_drawCircularPixel();
+#endif /* CMD_DRAWCIRCLEPIXEL */
+#ifdef CMD_DRAWSCRIBBLEPIXEL
 	else if (strncmp(inS,CMD_DRAWSCRIBBLEPIXEL,3)==0)
-	{
-	// go to coordinates.
-	drawScribblePixel_from_command();
-	}
+		drawScribblePixel_from_command();
+#endif /* CMD_DRAWSCRIBBLEPIXEL */
+#ifdef CMD_DRAWRECT
 	else if (strncmp(inS,CMD_DRAWRECT,3)==0)
-	{
-	// go to coordinates.
-	drawRectangle();
-	}
+		drawRectangle();
+#endif /* CMD_DRAWRECT */
+#ifdef CMD_CHANGEDRAWINGDIRECTION
 	else if (strncmp(inS,CMD_CHANGEDRAWINGDIRECTION,3)==0)
-	{
-	changeDrawingDirection();
-	}
+		changeDrawingDirection();
+#endif /* CMD_CHANGEDRAWINGDIRECTION */
+#ifdef CMD_PENDOWN
 	else if (strncmp(inS,CMD_PENDOWN,3)==0)
-	{
-	penDown();
-	}
+		penDown();
+#endif /* CMD_PENDOWN */
+#ifdef CMD_PENUP
 	else if (strncmp(inS,CMD_PENUP,3)==0)
-	{
-	penUp();
-	}
+		penUp();
+#endif /* CMD_PENUP */
 	else if (strncmp(inS,CMD_SETPOSITION,3)==0)
 	{
 	setPosition();
@@ -1361,6 +1366,7 @@ void changePenWidth()
 //////////////////////////////////////////////////////////////////
 // Change Drawing Direction										//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_CHANGEDRAWINGDIRECTION
 void changeDrawingDirection() 
 {
 	globalDrawDirectionMode = asInt(inParam1);
@@ -1376,6 +1382,7 @@ void changeDrawingDirection()
 #endif
 	PRINT(temp_char , 1)
 }
+#endif /* CMD_CHANGEDRAWINGDIRECTION */
 //////////////////////////////////////////////////////////////////
 // Extract parameters from received Command						//
 //////////////////////////////////////////////////////////////////
@@ -1535,6 +1542,7 @@ void testPenWidthScribble()
 //////////////////////////////////////////////////////////////////
 // Draw a Rectangle												//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_DRAWRECT
 void drawRectangle()
 {
 	long v1A = asLong(inParam1);
@@ -1555,6 +1563,7 @@ void drawRectangle()
 	moveTo(v1B, DX);
 	runToPosition(DX);
 }
+#endif /* CMD_DRAWRECT */
 //////////////////////////////////////////////////////////////////
 // move until reach final position								//
 //////////////////////////////////////////////////////////////////
@@ -1636,6 +1645,7 @@ long getMaxLength()
 //////////////////////////////////////////////////////////////////
 // Change Lenght Direct											//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_CHANGELENGTHDIRECT
 void changeLengthDirect()
 {
 	float endA = asFloat(inParam1);
@@ -1735,6 +1745,7 @@ void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmen
 	}
 	outputAvailableMemory();
 }
+#endif /* CMD_CHANGELENGTHDIRECT */
 //////////////////////////////////////////////////////////////////
 // Use Accelaration												//
 //////////////////////////////////////////////////////////////////
@@ -1797,6 +1808,8 @@ void drawTestDirectionSquare()
 //////////////////////////////////////////////////////////////////
 // Draw Square Pixel from command parameters					//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_DRAWPIXEL
+
 void drawSquarePixel_command() 
 {
 	long originA = asLong(inParam1);
@@ -1927,9 +1940,11 @@ unsigned char getAutoDrawDirection(long targetA, long targetB, long sourceA, lon
 	}
 	return dir;
 }
+#endif /* CMD_DRAWPIXEL */
 //////////////////////////////////////////////////////////////////
 // Draw Scribble Pixel from command parameters					//
 //////////////////////////////////////////////////////////////////
+#ifdef CMD_DRAWSCRIBBLEPIXEL
 void drawScribblePixel_from_command()
 {
 	long originA = asLong(inParam1);
@@ -1970,6 +1985,14 @@ void drawScribblePixel(long originA, long originB, int size, int density)
 		highLimitA+=inc;
 		currSize+=inc*2;
 	}
+}
+#endif /* CMD_DRAWSCRIBBLEPIXEL */
+//////////////////////////////////////////////////////////////////
+// Random Draw Direction										//
+//////////////////////////////////////////////////////////////////
+unsigned char getRandomDrawDirection()
+{
+	return random(1, 5);
 }
 //////////////////////////////////////////////////////////////////
 // Return random number from min to max							//
@@ -2426,7 +2449,9 @@ void runToNewPosition(long position , unsigned char side)
 //////////////////////////////////////////////////////////////////
 void releaseMotors()
 {
+#ifdef CMD_PENUP
 	penUp();
+#endif /* CMD_PENUP */
 }
 //////////////////////////////////////////////////////////////////
 // Get cartesian X coordinate									//
@@ -2482,6 +2507,7 @@ float rads(int n) {
 	return (n/180.0 * PI);
 }
 
+#ifdef CMD_DRAWCIRCLEPIXEL
 void curves_pixel_drawCircularPixel() 
 {
     long originA = asLong(inParam1);
@@ -2660,6 +2686,7 @@ void curves_drawSpiral(long centerx, long centery, int maxRadius, int increment,
   }
   //Serial.println("Finished spiral pixel.");
 }
+#endif /* CMD_DRAWCIRCLEPIXEL */
 
 long getCartesianX() {
 	long calcX = getCartesianXFP(currentPosition(SX), currentPosition(DX));
