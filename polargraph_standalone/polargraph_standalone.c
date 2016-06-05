@@ -186,6 +186,7 @@ void send_commands(unsigned long nr_commands)
 	unsigned long command = 0;
 	unsigned long pointer = 0;
 	unsigned long percentual = 0;
+	unsigned char retry_cnt = 0;
 
 	wait_connection();
 
@@ -242,9 +243,14 @@ go_commands:
 	while(1)
 	{
 		i=0;
+		retry_cnt = 0;
+retry:
 		res = pf_read(string, 30, &s1);
-		if (res != FR_OK) break;
-		if(s1==0) break;
+		if ((res != FR_OK) || (s1==0)) {
+			retry_cnt++;
+			if (retry_cnt > MAX_RETRY) break;
+			goto retry;
+		}
 		while(string[i++] != 10){}
 		string[i] = 0;
 		pointer = pointer + strlen(string);

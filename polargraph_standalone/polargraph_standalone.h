@@ -63,6 +63,8 @@ char new_line = 0;
 #define path_lenght 40
 char path[path_lenght] = "";
 
+#define MAX_RETRY 100
+
 char string[30];
 char temp_char[10];
 
