@@ -1689,7 +1689,7 @@ void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmen
 	float c2y = getCartesianYFP(c2x, p2a);
 
 	// test to see if it's on the page
-	if (c2x > 20 && c2x<pageWidth-20 && c2y > 20 && c2y <pageHeight-20)
+	if ((c2x > 20) && (c2x < pageWidth-20) && (c2y > 20) && (c2y < pageHeight-20) && (c1x > 20) && (c1x < pageWidth-20) && (c1y > 20) && (c1y < pageHeight-20) )
 	{
 		float deltaX = c2x-c1x;		// distance each must move (signed)
 		float deltaY = c2y-c1y;
@@ -1716,6 +1716,9 @@ void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmen
 		deltaX = deltaX/linesegs;
 		deltaY = deltaY/linesegs;
 
+    	// render the line in N shorter segments
+    	long runSpeed_var = 0;
+
 		// render the line in N shorter segments
 		while (linesegs > 0)
 		{
@@ -1729,7 +1732,10 @@ void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmen
 
 			// do the move
 			useAcceleration(false);
-			changeLength_float(pA, pB);
+      		//runSpeed_var = desiredSpeed_new(linesegs, runSpeed_var, currentAcceleration*4);
+			//setSpeed(runSpeed_var,SX);
+      		//setSpeed(runSpeed_var,DX);
+			changeLength_long((long)pA, (long)pB);
 
 			// one line less to do!
 			linesegs--;
@@ -1737,7 +1743,6 @@ void drawBetweenPoints(float p1a, float p1b, float p2a, float p2b, int maxSegmen
 
 		// do the end point in case theres been some rounding errors etc
 		reportingPosition = true;
-		changeLength_float(p2a, p2b);
 		useAcceleration(true);
 	}
 	else
