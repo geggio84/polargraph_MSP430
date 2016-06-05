@@ -351,6 +351,7 @@ unsigned char runSpeed(unsigned char side);
 void step(unsigned int step, unsigned char side);
 void computeNewSpeed(unsigned char side);
 float desiredSpeed(unsigned char side);
+float desiredSpeed_new(long distanceTo, float currentSpeed, float acceleration);
 void setSpeed(float speed_target , unsigned char side);
 long distanceToGo_function(unsigned char side);
 int random(int min, int max);
@@ -2507,6 +2508,49 @@ float rads(int n) {
 	return (n/180.0 * PI);
 }
 
+float desiredSpeed_new(long distanceTo, float currentSpeed, float acceleration)
+{
+    float requiredSpeed;
+
+    if (distanceTo == 0)
+	return 0.0f; // We're there
+
+    // sqrSpeed is the signed square of currentSpeed.
+    float sqrSpeed = currentSpeed * currentSpeed;
+    if (currentSpeed < 0.0)
+      sqrSpeed = -sqrSpeed;
+      
+    float twoa = 2.0f * acceleration; // 2ag
+    
+    // if v^^2/2as is the the left of target, we will arrive at 0 speed too far -ve, need to accelerate clockwise
+    if ((sqrSpeed / twoa) < distanceTo)
+    {
+	// Accelerate clockwise
+	// Need to accelerate in clockwise direction
+	if (currentSpeed == 0.0f)
+	    requiredSpeed = sqrt(twoa);
+	else
+	    requiredSpeed = currentSpeed + fabs(acceleration / currentSpeed);
+
+	if (requiredSpeed > currentMaxSpeed)
+	    requiredSpeed = currentMaxSpeed;
+    }
+    else
+    {
+	// Decelerate clockwise, accelerate anticlockwise
+	// Need to accelerate in clockwise direction
+	if (currentSpeed == 0.0f)
+	    requiredSpeed = -sqrt(twoa);
+	else
+	    requiredSpeed = currentSpeed - fabs(acceleration / currentSpeed);
+	if (requiredSpeed < -currentMaxSpeed)
+	    requiredSpeed = -currentMaxSpeed;
+    }
+    
+    //Serial.println(requiredSpeed);
+    return requiredSpeed;
+}
+
 #ifdef CMD_DRAWCIRCLEPIXEL
 void curves_pixel_drawCircularPixel() 
 {
@@ -2564,49 +2608,6 @@ void curves_drawCurve(long x, long y, long fx, long fy, long cx, long cy, int sp
     reportingPosition = true;
     //usingAcceleration = true;
   }  
-}
-
-float desiredSpeed_new(long distanceTo, float currentSpeed, float acceleration)
-{
-    float requiredSpeed;
-
-    if (distanceTo == 0)
-	return 0.0f; // We're there
-
-    // sqrSpeed is the signed square of currentSpeed.
-    float sqrSpeed = currentSpeed * currentSpeed;
-    if (currentSpeed < 0.0)
-      sqrSpeed = -sqrSpeed;
-      
-    float twoa = 2.0f * acceleration; // 2ag
-    
-    // if v^^2/2as is the the left of target, we will arrive at 0 speed too far -ve, need to accelerate clockwise
-    if ((sqrSpeed / twoa) < distanceTo)
-    {
-	// Accelerate clockwise
-	// Need to accelerate in clockwise direction
-	if (currentSpeed == 0.0f)
-	    requiredSpeed = sqrt(twoa);
-	else
-	    requiredSpeed = currentSpeed + fabs(acceleration / currentSpeed);
-
-	if (requiredSpeed > currentMaxSpeed)
-	    requiredSpeed = currentMaxSpeed;
-    }
-    else
-    {
-	// Decelerate clockwise, accelerate anticlockwise
-	// Need to accelerate in clockwise direction
-	if (currentSpeed == 0.0f)
-	    requiredSpeed = -sqrt(twoa);
-	else
-	    requiredSpeed = currentSpeed - fabs(acceleration / currentSpeed);
-	if (requiredSpeed < -currentMaxSpeed)
-	    requiredSpeed = -currentMaxSpeed;
-    }
-    
-    //Serial.println(requiredSpeed);
-    return requiredSpeed;
 }
 
 void curves_drawSpiral(long centerx, long centery, int maxRadius, int increment, int density) 
