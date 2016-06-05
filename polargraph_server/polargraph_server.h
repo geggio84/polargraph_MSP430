@@ -2459,7 +2459,7 @@ void releaseMotors()
 //////////////////////////////////////////////////////////////////
 float getCartesianXFP(float aPos, float bPos)
 {
-	float calcX = (pageWidth*pageWidth - bPos*bPos + aPos*aPos) / (pageWidth*2);
+	float calcX = (((float)pageWidth*(float)pageWidth) - ((float)bPos*(float)bPos) + ((float)aPos*(float)aPos)) / ((float)pageWidth*2.0);
 	return calcX;
 }
 //////////////////////////////////////////////////////////////////
